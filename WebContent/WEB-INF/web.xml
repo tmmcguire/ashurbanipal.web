@@ -14,10 +14,27 @@
     	<param-name>javax.ws.rs.Application</param-name>
     	<param-value>net.crsr.ashurbanipal.web.AshurbanipalWeb</param-value>
     </init-param>
+    <init-param>
+    	<param-name>propertiesLocation</param-name>
+    	<param-value>/WEB-INF/configuration.properties</param-value>
+    </init-param>
     <load-on-startup>1</load-on-startup>
   </servlet>
   <servlet-mapping>
     <servlet-name>RestServlet</servlet-name>
     <url-pattern>/data/*</url-pattern>
   </servlet-mapping>
+  <servlet>
+  	<servlet-name>RestSdkAdmin</servlet-name>
+  	<servlet-class>org.apache.wink.server.internal.servlet.AdminServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+  	<servlet-name>RestSdkAdmin</servlet-name>
+  	<url-pattern>/servlet-admin</url-pattern>
+  </servlet-mapping>
+  <resource-ref>
+  	<res-ref-name>jdbc/AshurbanipalDB</res-ref-name>
+  	<res-type>javax.sql.DataSource</res-type>
+  	<res-auth>Container</res-auth>
+  </resource-ref>
 </web-app>
