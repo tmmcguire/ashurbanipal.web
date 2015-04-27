@@ -25,7 +25,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import net.crsr.ashurbanipal.web.InternalServerException;
+import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 @Path("/lookup")
 @Workspace(workspaceTitle="Text Lookup", collectionTitle="Author, Title, Subject query")
-public class TextLookupResource {
+public class TextLookup {
   
 //  private static final String ROW_QUERY = "select * from book_metadata where upper(title) like ? or upper(author) like ? or upper(subject) like ? order by author, title, etext_no limit ? offset ?";
 //  private static final String COUNT_QUERY = "select count(*) as count from book_metadata where upper(title) like ? or upper(author) like ? or upper(subject) like ?";
@@ -43,7 +43,7 @@ public class TextLookupResource {
   private static final String ROW_QUERY = "select * from book_metadata where position(? in upper(title)) > 0 or position(? in upper(author)) > 0 or position(? in upper(subject)) > 0 order by author, title, etext_no limit ? offset ?";
   private static final String COUNT_QUERY = "select count(*) as count from book_metadata where position(? in upper(title)) > 0 or position(? in upper(author)) > 0 or position(? in upper(subject)) > 0";
   
-  private static final Logger log = LoggerFactory.getLogger(TextLookupResource.class);
+  private static final Logger log = LoggerFactory.getLogger(TextLookup.class);
   
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -57,7 +57,6 @@ public class TextLookupResource {
     if (start == null) { start = 1; }
     if (limit == null) { limit = 20; }
     Connection connection = null;
-    ResultSet resultSet = null;
     try {
       final Context envCtx = (Context) new InitialContext().lookup("java:comp/env");
       final DataSource dataSource = (DataSource) envCtx.lookup("jdbc/AshurbanipalDB");
@@ -73,7 +72,6 @@ public class TextLookupResource {
     } catch (NamingException e) {
       throw new InternalServerException("jndi exception", e);
     } finally {
-      if (resultSet != null) { try { resultSet.close(); } catch (SQLException e) { } }
       if (connection != null) { try { connection.close(); } catch (SQLException e) { } }
     }
   }
