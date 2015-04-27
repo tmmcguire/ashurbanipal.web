@@ -1,4 +1,4 @@
-package net.crsr.ashurbanipal.web;
+package net.crsr.ashurbanipal.web.exceptions;
 
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
