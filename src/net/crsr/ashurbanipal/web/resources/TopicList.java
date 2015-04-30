@@ -50,7 +50,7 @@ public class TopicList {
       log.info(message);
       throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
     }
-    if (start == null) { start = 1; }
+    if (start == null) { start = 0; }
     if (limit == null) { limit = 20; }
     Connection connection = null;
     try {
