@@ -47,14 +47,14 @@ public class TextLookup {
   
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public JSONObject getQuery(@QueryParam("q") String searchTerm, @QueryParam("start") Integer start, @QueryParam("limit") Integer limit) {
+  public JSONObject getQuery(@QueryParam("query") String searchTerm, @QueryParam("start") Integer start, @QueryParam("limit") Integer limit) {
     if (searchTerm == null) {
-      final String message = "bad request: parameter q=\"search-term\" required";
+      final String message = "bad request: parameter query=\"search-term\" required";
       log.info(message);
       throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
     }
     final String upperSearchTerm = /* "%" + */ searchTerm.toUpperCase() /* + "%" */;
-    if (start == null) { start = 1; }
+    if (start == null) { start = 0; }
     if (limit == null) { limit = 20; }
     Connection connection = null;
     try {
