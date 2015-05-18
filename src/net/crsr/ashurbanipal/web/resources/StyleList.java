@@ -106,8 +106,16 @@ public class StyleList {
         results.add(result);
         for (int i = 1; i <= columns; ++i) {
           switch (metadata.getColumnType(i)) {
+            case Types.BIGINT:
             case Types.INTEGER:
+            case Types.SMALLINT:
+            case Types.TINYINT:
               result.put(metadata.getColumnLabel(i), resultSet.getInt(i));
+              break;
+            case Types.DOUBLE:
+            case Types.FLOAT:
+            case Types.REAL:
+              result.put(metadata.getColumnLabel(i), resultSet.getDouble(i));
               break;
             default:
               result.put(metadata.getColumnLabel(i), resultSet.getString(i));
