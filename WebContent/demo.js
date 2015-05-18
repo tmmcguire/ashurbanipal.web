@@ -154,6 +154,54 @@
         '</div></tpl>'
     );
 
+    PG.style = {
+        rows: undefined,
+        current: 1,
+    };
+
+    PG.topic = {
+        rows: undefined,
+        current: 1,
+    };
+
+    PG.combination = {
+        rows: undefined,
+        current: 1,
+    };
+
+    function cbStyleSuccess(response, options) {
+        PG.style.rows = Ext.decode(response.responseText).rows;
+
+        for (var i = 1; i < 4; ++i) {
+            var data = PG.style.rows[i];
+            data.distance = data.dist.toFixed(3) + " ell";
+            PG.bookTpl.overwrite(Ext.get('style' + i), data);
+        }
+    }
+
+    function cbTopicSuccess(response, options) {
+        PG.topic.rows = Ext.decode(response.responseText).rows;
+
+        for (var i = 1; i < 4; ++i) {
+            var data = PG.topic.rows[i];
+            data.distance = data.score.toFixed(3) + " bole";
+            PG.bookTpl.overwrite(Ext.get('topic' + i), data);
+        }
+    }
+
+    function cbCombinationSuccess(response, options) {
+        PG.combination.rows = Ext.decode(response.responseText).rows;
+
+        for (var i = 1; i < 4; ++i) {
+            var data = PG.combination.rows[i];
+            data.distance = data.dist_score.toFixed(3) + " ell bole";
+            PG.bookTpl.overwrite(Ext.get('combined' + i), data);
+        }
+    }
+
+    function cbStyleFailure(response, options) {
+    }
+
     function cbSelectionChange(combo, record, index) {
         if (!record) { return; }
         var selectedBook = record.data;
@@ -162,6 +210,31 @@
         // Remove the distance from the selected data (if set by previous selection)
         selectedBook.distance = "";
         template.overwrite(Ext.get('book-info'), selectedBook);
+
+        Ext.Ajax.request({
+            url: 'data/style',
+            method: 'GET',
+            success: cbStyleSuccess,
+            failure: cbStyleFailure,
+            params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
+        });
+
+        Ext.Ajax.request({
+            url: 'data/topic',
+            method: 'GET',
+            success: cbTopicSuccess,
+            failure: cbStyleFailure,
+            params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
+        });
+
+        Ext.Ajax.request({
+            url: 'data/combination',
+            method: 'GET',
+            success: cbCombinationSuccess,
+            failure: cbStyleFailure,
+            params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
+        });
+
 
     //     var styleRow = PG.styleStore.getById(selectedBook.etext_no);
     //     var topicRow = PG.topicStore.getById(selectedBook.etext_no);
