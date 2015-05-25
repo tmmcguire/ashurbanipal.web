@@ -54,6 +54,7 @@
     );
 
     PG.style = {
+        url: 'data/style',
         transactionId: undefined,
         rows: undefined,
         current: 1,
@@ -65,10 +66,12 @@
         success: function(response, options) {
             PG.style.transactionId = undefined;
             PG.style.rows = Ext.decode(response.responseText).rows;
-            for (var i = 1; i < 4; ++i) {
-                var data = PG.style.rows[i];
-                data.distance = data.dist.toFixed(3) + " ell";
-                PG.bookTpl.overwrite(Ext.get('style' + i), data);
+            if (PG.style.rows && PG.style.rows.length) {
+                for (var i = 1; i < 4; ++i) {
+                    var data = PG.style.rows[i];
+                    data.distance = data.dist.toFixed(3) + " ell";
+                    PG.bookTpl.overwrite(Ext.get('style' + i), data);
+                }
             }
             PG.style.loadMask.hide();
         },
@@ -79,6 +82,7 @@
     };
 
     PG.topic = {
+        url: 'data/topic',
         transactionId: undefined,
         rows: undefined,
         current: 1,
@@ -90,10 +94,12 @@
         success: function(response, options) {
             PG.topic.transactionId = undefined;
             PG.topic.rows = Ext.decode(response.responseText).rows;
-            for (var i = 1; i < 4; ++i) {
-                var data = PG.topic.rows[i];
-                data.distance = data.score.toFixed(3) + " bole";
-                PG.bookTpl.overwrite(Ext.get('topic' + i), data);
+            if (PG.topic.rows && PG.topic.rows.length) {
+                for (var i = 1; i < 4; ++i) {
+                    var data = PG.topic.rows[i];
+                    data.distance = data.score.toFixed(3) + " bole";
+                    PG.bookTpl.overwrite(Ext.get('topic' + i), data);
+                }
             }
             PG.topic.loadMask.hide();
         },
@@ -105,6 +111,7 @@
     };
 
     PG.combination = {
+        url: 'data/combination',
         transactionId: undefined,
         rows: undefined,
         current: 1,
@@ -116,10 +123,12 @@
         success: function(response, options) {
             PG.combination.transactionId = undefined;
             PG.combination.rows = Ext.decode(response.responseText).rows;
-            for (var i = 1; i < 4; ++i) {
-                var data = PG.combination.rows[i];
-                data.distance = data.dist_score.toFixed(3) + " ell bole";
-                PG.bookTpl.overwrite(Ext.get('combined' + i), data);
+            if (PG.combination.rows && PG.combination.rows.length) {
+                for (var i = 1; i < 4; ++i) {
+                    var data = PG.combination.rows[i];
+                    data.distance = data.dist_score.toFixed(3) + " ell bole";
+                    PG.bookTpl.overwrite(Ext.get('combined' + i), data);
+                }
             }
             PG.combination.loadMask.hide();
         },
@@ -142,31 +151,19 @@
         selectedBook.distance = "";
         PG.bookTpl.overwrite(Ext.get('book-info'), selectedBook);
 
-        PG.style.loadMask.show();
-        PG.style.transactionId = Ext.Ajax.request({
-            url: 'data/style',
-            method: 'GET',
-            success: PG.style.success,
-            failure: PG.style.failure,
-            params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
-        });
+        startRequest(PG.style, selectedBook.etext_no);
+        startRequest(PG.topic, selectedBook.etext_no);
+        startRequest(PG.combination, selectedBook.etext_no);
+    }
 
-        PG.topic.loadMask.show();
-        PG.topic.transactionId = Ext.Ajax.request({
-            url: 'data/topic',
+    function startRequest(query, etext_no) {
+        query.loadMask.show();
+        query.transactionId = Ext.Ajax.request({
+            url: query.url,
             method: 'GET',
-            success: PG.topic.success,
-            failure: PG.topic.failure,
-            params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
-        });
-
-        PG.combination.loadMask.show();
-        PG.combination.transactionId = Ext.Ajax.request({
-            url: 'data/combination',
-            method: 'GET',
-            success: PG.combination.success,
-            failure: PG.combination.failure,
-            params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
+            success: query.success,
+            failure: query.failure,
+            params: { etext_no: etext_no, start: 0, limit: 20 }
         });
     }
 
