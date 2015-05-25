@@ -6,107 +6,6 @@
     function coalesce_conversion(name) { return function(v,rec) { return rec[name].join('; '); } }
     function pick_first_conversion(name) { return function(v,rec) { return rec[name][0]; } }
 
-    // function euclidianDistance(vec1, vec2) {
-    //     var length = vec1.length;
-    //     var d = 0.0;
-    //     for (var i = 0; i < length; ++i) {
-    //         d += Math.pow(vec1[i] - vec2[i], 2);
-    //     }
-    //     return Math.sqrt(d);
-    // }
-
-    // function intersect(vec1, vec2) {
-    //     var length = vec1.length;
-    //     var sum = 0;
-    //     for (var i = 0; i < length; ++i) {
-    //         // see Hacker's Delight
-    //         var x = vec1[i] & vec2[i];
-    //         x = x - ((x >> 1) & 0x55555555);
-    //         x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
-    //         x = (x + (x >> 4)) & 0x0F0F0F0F;
-    //         x = x + (x >> 8);
-    //         x = x + (x >> 16);
-    //         sum += x & 0x0000003F;
-    //     }
-    //     return 1 - (sum / 200);
-    // }
-    // PG.intersect = intersect;
-
-    // function booksByStyle(initial) {
-    //     var books = [];
-    //     PG.styleStore.each(function (rec) {
-    //         var data = rec.data;
-    //         books.push({
-    //             etext_no: data.etext_no,
-    //             dist:     euclidianDistance(initial, data.vector)
-    //         });
-    //     });
-    //     books.sort(function(l,r) { return l.dist - r.dist; });
-    //     return books;
-    // }
-    // PG.booksbyStyle = booksByStyle;
-
-    // function booksByTopic(initial) {
-    //     var books = [];
-    //     PG.topicStore.each(function(rec) {
-    //         var data = rec.data;
-    //         books.push({
-    //             etext_no: data.etext_no,
-    //             dist:     intersect(initial, data.wordset)
-    //         });
-    //     });
-    //     books.sort(function(l,r) { return l.dist - r.dist; });
-    //     return books;
-    // }
-    // PG.booksByTopic = booksByTopic;
-
-    // function booksByCombination(byStyle, byTopic) {
-    //     var styles = { };
-    //     var length = byStyle.length;
-    //     for (var i = 0; i < length; ++i) {
-    //         styles[byStyle[i].etext_no] = byStyle[i].dist;
-    //     }
-    //     var books = [];
-    //     length = byTopic.length;
-    //     for (var i = 0; i < length; ++i) {
-    //         var etext_no = byTopic[i].etext_no;
-    //         var distance = styles[etext_no] * Math.pow(byTopic[i].dist, 2);
-    //         books.push({
-    //             etext_no: etext_no,
-    //             dist:     distance,
-    //         });
-    //     }
-    //     books.sort(function(l,r) { return l.dist - r.dist; });
-    //     return books;
-    // }
-    // PG.booksByCombination = booksByCombination;
-
-    // PG.styledataReader = new Ext.data.JsonReader({
-    //     idProperty: 'etext_no',
-    //     root:       'rows',
-    // }, [ 'etext_no', 'vector' ]);
-
-    // PG.topicdataReader = new Ext.data.JsonReader({
-    //     idProperty: 'etext_no',
-    //     root:       'rows',
-    // }, [ 'etext_no', 'wordset' ]);
-
-    // PG.metadataReader = new Ext.data.JsonReader({
-    //     idProperty: 'etext_no',
-    //     root:       'rows',
-    // }, [
-    //     {name: 'etext_no',         convert: parseInt(pick_first_conversion('etext_no')) },
-    //     {name: 'title',            convert: pick_first_conversion('title') },
-    //     {name: 'author',           convert: coalesce_conversion('author') },
-    //     {name: 'subject',          convert: coalesce_conversion('subject') },
-    //     {name: 'copyright_status', convert: pick_first_conversion('copyright_status') },
-    //     {name: 'note',             convert: coalesce_conversion('note') },
-    //     {name: 'release_date',     convert: pick_first_conversion('release_date') },
-    //     {name: 'loc_class',        convert: pick_first_conversion('loc_class') },
-    //     {name: 'link',             convert: pick_first_conversion('link') },
-    //     {name: 'language',         convert: pick_first_conversion('language') },
-    // ]);
-
     PG.text_store = new Ext.data.Store({
         proxy: new Ext.data.HttpProxy({
             url: 'data/lookup',
@@ -155,115 +54,120 @@
     );
 
     PG.style = {
+        transactionId: undefined,
         rows: undefined,
         current: 1,
+
+        loadMask: new Ext.LoadMask(Ext.get('style-row'), {
+            msg: '<h3>Loading...</h3>'
+        }),
+
+        success: function(response, options) {
+            PG.style.transactionId = undefined;
+            PG.style.rows = Ext.decode(response.responseText).rows;
+            for (var i = 1; i < 4; ++i) {
+                var data = PG.style.rows[i];
+                data.distance = data.dist.toFixed(3) + " ell";
+                PG.bookTpl.overwrite(Ext.get('style' + i), data);
+            }
+            PG.style.loadMask.hide();
+        },
+
+        failure: function(response, options) {
+            PG.style.transactionId = undefined;
+        }
     };
 
     PG.topic = {
+        transactionId: undefined,
         rows: undefined,
         current: 1,
+
+        loadMask: new Ext.LoadMask(Ext.get('topic-row'), {
+            msg: '<h3>Loading...</h3>'
+        }),
+
+        success: function(response, options) {
+            PG.topic.transactionId = undefined;
+            PG.topic.rows = Ext.decode(response.responseText).rows;
+            for (var i = 1; i < 4; ++i) {
+                var data = PG.topic.rows[i];
+                data.distance = data.score.toFixed(3) + " bole";
+                PG.bookTpl.overwrite(Ext.get('topic' + i), data);
+            }
+            PG.topic.loadMask.hide();
+        },
+
+        failure: function(response, options) {
+            PG.topic.transactionId = undefined;
+        }
+
     };
 
     PG.combination = {
+        transactionId: undefined,
         rows: undefined,
         current: 1,
+
+        loadMask: new Ext.LoadMask(Ext.get('combined-row'), {
+            msg: '<h3>Loading...</h3>'
+        }),
+
+        success: function(response, options) {
+            PG.combination.transactionId = undefined;
+            PG.combination.rows = Ext.decode(response.responseText).rows;
+            for (var i = 1; i < 4; ++i) {
+                var data = PG.combination.rows[i];
+                data.distance = data.dist_score.toFixed(3) + " ell bole";
+                PG.bookTpl.overwrite(Ext.get('combined' + i), data);
+            }
+            PG.combination.loadMask.hide();
+        },
+
+        failure: function(response, options) {
+            PG.combination.transactionId = undefined;
+        }
+
     };
-
-    function cbStyleSuccess(response, options) {
-        PG.style.rows = Ext.decode(response.responseText).rows;
-
-        for (var i = 1; i < 4; ++i) {
-            var data = PG.style.rows[i];
-            data.distance = data.dist.toFixed(3) + " ell";
-            PG.bookTpl.overwrite(Ext.get('style' + i), data);
-        }
-    }
-
-    function cbTopicSuccess(response, options) {
-        PG.topic.rows = Ext.decode(response.responseText).rows;
-
-        for (var i = 1; i < 4; ++i) {
-            var data = PG.topic.rows[i];
-            data.distance = data.score.toFixed(3) + " bole";
-            PG.bookTpl.overwrite(Ext.get('topic' + i), data);
-        }
-    }
-
-    function cbCombinationSuccess(response, options) {
-        PG.combination.rows = Ext.decode(response.responseText).rows;
-
-        for (var i = 1; i < 4; ++i) {
-            var data = PG.combination.rows[i];
-            data.distance = data.dist_score.toFixed(3) + " ell bole";
-            PG.bookTpl.overwrite(Ext.get('combined' + i), data);
-        }
-    }
-
-    function cbStyleFailure(response, options) {
-    }
 
     function cbSelectionChange(combo, record, index) {
         if (!record) { return; }
-        var selectedBook = record.data;
-        var template = PG.bookTpl;
+        selectBook(record.data);
+    }
+
+    function selectBook(selectedBook) {
+        Ext.History.add(Ext.util.JSON.encode(selectedBook));
 
         // Remove the distance from the selected data (if set by previous selection)
         selectedBook.distance = "";
-        template.overwrite(Ext.get('book-info'), selectedBook);
+        PG.bookTpl.overwrite(Ext.get('book-info'), selectedBook);
 
-        Ext.Ajax.request({
+        PG.style.loadMask.show();
+        PG.style.transactionId = Ext.Ajax.request({
             url: 'data/style',
             method: 'GET',
-            success: cbStyleSuccess,
-            failure: cbStyleFailure,
+            success: PG.style.success,
+            failure: PG.style.failure,
             params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
         });
 
-        Ext.Ajax.request({
+        PG.topic.loadMask.show();
+        PG.topic.transactionId = Ext.Ajax.request({
             url: 'data/topic',
             method: 'GET',
-            success: cbTopicSuccess,
-            failure: cbStyleFailure,
+            success: PG.topic.success,
+            failure: PG.topic.failure,
             params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
         });
 
-        Ext.Ajax.request({
+        PG.combination.loadMask.show();
+        PG.combination.transactionId = Ext.Ajax.request({
             url: 'data/combination',
             method: 'GET',
-            success: cbCombinationSuccess,
-            failure: cbStyleFailure,
+            success: PG.combination.success,
+            failure: PG.combination.failure,
             params: { etext_no: selectedBook.etext_no, start: 0, limit: 20 }
         });
-
-
-    //     var styleRow = PG.styleStore.getById(selectedBook.etext_no);
-    //     var topicRow = PG.topicStore.getById(selectedBook.etext_no);
-    //     if (styleRow && topicRow) {
-
-    //         var byStyle = booksByStyle( styleRow.data.vector );
-    //         var byTopic = booksByTopic( topicRow.data.wordset );
-    //         var byCombination = booksByCombination(byStyle, byTopic);
-
-    //         var metadataStore = PG.metadataStore;
-
-    //         for (var i = 1; i < 4; ++i) {
-    //             var data = metadataStore.getById(byStyle[i].etext_no).data;
-    //             data.distance = byStyle[i].dist.toFixed(3) + " ell";
-    //             template.overwrite(Ext.get('style' + i), data);
-    //         }
-
-    //         for (var i = 1; i < 4; ++i) {
-    //             var data = metadataStore.getById(byTopic[i].etext_no).data;
-    //             data.distance = byTopic[i].dist.toFixed(3) + " bole";
-    //             template.overwrite(Ext.get('topic' + i), data);
-    //         }
-
-    //         for (var i = 1; i < 4; ++i) {
-    //             var data = metadataStore.getById(byCombination[i].etext_no).data;
-    //             data.distance = byCombination[i].dist.toFixed(3) + " ell bole";
-    //             template.overwrite(Ext.get('combined' + i), data);
-    //         }
-    //     }
     }
 
     PG.text_searchbox = new Ext.form.ComboBox({
@@ -323,7 +227,18 @@
     // }
 
     PG.start = function() {
-
+        Ext.History.init();
+        // Handle this change event in order to restore the UI to the appropriate history state
+        Ext.History.on('change', function(token){
+            if (PG.style.transactionId) { Ext.Ajax.abort(PG.style.transactionId); }
+            if (PG.topic.transactionId) { Ext.Ajax.abort(PG.topic.transactionId); }
+            if (PG.combination.transactionId) { Ext.Ajax.abort(PG.combination.transactionId); }
+            if (token) {
+                selectBook(Ext.util.JSON.decode(token));
+            } else {
+                PG.text_searchbox.setValue('');
+            }
+        });
     }
 
     //     PG.loadMask = new Ext.LoadMask(Ext.getBody(), {
