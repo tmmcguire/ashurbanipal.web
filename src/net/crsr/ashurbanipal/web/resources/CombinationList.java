@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 public class CombinationList {
   
   private static final String COUNT_QUERY = "select count(*) from book_metadata";
-  private static final String SEARCH_QUERY = "select * from combination_scores(?) tc inner join book_metadata bm on (tc.etext_no = bm.etext_no) order by tc.dist_score offset ? limit ?";
+  private static final String SEARCH_QUERY = "select tc.dist_score as dist, bm.* from combination_scores(?) tc inner join book_metadata bm on (tc.etext_no = bm.etext_no) order by tc.dist_score offset ? limit ?";
   
   private static final Logger log = LoggerFactory.getLogger(CombinationList.class);
 

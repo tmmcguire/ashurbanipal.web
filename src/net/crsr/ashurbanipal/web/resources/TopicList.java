@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 public class TopicList {
   
   private static final String COUNT_QUERY = "select count(*) from book_metadata";
-  private static final String SEARCH_QUERY = "select topics.score, meta.* from topic_scores(?) topics inner join book_metadata meta on (topics.etext_no = meta.etext_no) order by score offset ? limit ?";
+  private static final String SEARCH_QUERY = "select topics.score as dist, meta.* from topic_scores(?) topics inner join book_metadata meta on (topics.etext_no = meta.etext_no) order by score offset ? limit ?";
   
   private static final Logger log = LoggerFactory.getLogger(TopicList.class);
 
