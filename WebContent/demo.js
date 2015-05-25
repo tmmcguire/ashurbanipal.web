@@ -6,28 +6,24 @@
     function coalesce_conversion(name) { return function(v,rec) { return rec[name].join('; '); } }
     function pick_first_conversion(name) { return function(v,rec) { return rec[name][0]; } }
 
-    PG.text_store = new Ext.data.Store({
-        proxy: new Ext.data.HttpProxy({
-            url: 'data/lookup',
+    function startRequest(query, etext_no) {
+        query.loadMask.show();
+        query.transactionId = Ext.Ajax.request({
+            url: query.url,
             method: 'GET',
-        }),
-        reader: new Ext.data.JsonReader({
-            root: 'rows',
-            totalProperty: 'count',
-            id: 'etext_no'
-        }, [
-            { name: 'author' },
-            { name: 'copyright_status' },
-            { name: 'etext_no' },
-            { name: 'language' },
-            { name: 'link' },
-            { name: 'loc_class' },
-            { name: 'notes' },
-            { name: 'release_date' },
-            { name: 'subject' },
-            { name: 'title' },
-        ]),
-    });
+            success: query.success,
+            failure: query.failure,
+            params: { etext_no: etext_no, start: 0, limit: 20 }
+        });
+    }
+
+    function selectBook(selectedBook) {
+        Ext.History.add(Ext.util.JSON.encode(selectedBook));
+        PG.bookTpl.overwrite(Ext.get('book-info'), selectedBook);
+        startRequest(PG.style, selectedBook.etext_no);
+        startRequest(PG.topic, selectedBook.etext_no);
+        startRequest(PG.combination, selectedBook.etext_no);
+    }
 
     PG.bookTpl = new Ext.XTemplate(
         '<div class="book-details"><a href="{link}" style="text-decoration:none; color:#000000;" target="_blank">',
@@ -164,32 +160,31 @@
 
     };
 
-    function selectBook(selectedBook) {
-        Ext.History.add(Ext.util.JSON.encode(selectedBook));
-
-        // Remove the distance from the selected data (if set by previous selection)
-        selectedBook.distance = "";
-        PG.bookTpl.overwrite(Ext.get('book-info'), selectedBook);
-
-        startRequest(PG.style, selectedBook.etext_no);
-        startRequest(PG.topic, selectedBook.etext_no);
-        startRequest(PG.combination, selectedBook.etext_no);
-    }
-
-    function startRequest(query, etext_no) {
-        query.loadMask.show();
-        query.transactionId = Ext.Ajax.request({
-            url: query.url,
+    PG.text_store = new Ext.data.Store({
+        proxy: new Ext.data.HttpProxy({
+            url: 'data/lookup',
             method: 'GET',
-            success: query.success,
-            failure: query.failure,
-            params: { etext_no: etext_no, start: 0, limit: 20 }
-        });
-    }
+        }),
+        reader: new Ext.data.JsonReader({
+            root: 'rows',
+            totalProperty: 'count',
+            id: 'etext_no'
+        }, [
+            { name: 'author' },
+            { name: 'copyright_status' },
+            { name: 'etext_no' },
+            { name: 'language' },
+            { name: 'link' },
+            { name: 'loc_class' },
+            { name: 'notes' },
+            { name: 'release_date' },
+            { name: 'subject' },
+            { name: 'title' },
+        ]),
+    });
 
     PG.text_searchbox = new Ext.form.ComboBox({
         store: PG.text_store,
-//        displayField: 'title',
         loadingText: 'Searching...',
         width: 570,
         pageSize: 20,
@@ -205,47 +200,6 @@
         },
     });
 
-    // function createGrid() {
-    //     PG.grid = new Ext.grid.GridPanel({
-    //         store: PG.metadataStore,
-    //         renderTo: 'grid-example',
-    //         columns: [
-    //             { id: 'etext_no', header: 'EText',  dataIndex: 'etext_no', sortable: true, width: 50  },
-    //             { id: 'title',    header: 'Title',  dataIndex: 'title',    sortable: true, width: 275 },
-    //             { id: 'author',   header: 'Author', dataIndex: 'author',   sortable: true, width: 250 },
-    //         ],
-    //         stripeRows: true,
-    //         height: 350,
-    //         width: 600,
-    //         selModel: new Ext.grid.RowSelectionModel({
-    //             singleSelect: true,
-    //             listeners: { 'selectionchange': cbSelectionChange, },
-    //         }),
-    //         listeners: {
-    //             'viewready': function(grid) {
-    //                 var row = PG.metadataStore.indexOf( PG.metadataStore.getById(773) );
-    //                 grid.getSelectionModel().selectRow(row,false,false);
-    //                 grid.getView().focusRow(row);
-    //                 PG.loadMask.hide();
-    //             }
-    //         }
-    //     });
-    // }
-
-    // PG.loaded = 0;
-    // function loadingCompleted() {
-    //     PG.loaded++;
-    //     var msg = Ext.get('loadmask').dom;
-    //     if (PG.loaded === 1) {
-    //         msg.innerHTML = msg.innerHTML + "<p>There's one. Go, Mr. Ferret!</p>";
-    //     } else if (PG.loaded === 2) {
-    //         msg.innerHTML = msg.innerHTML + "<p>There's another. (Pardon me, I have to get him some more coffee.)</p>";
-    //     } else if (PG.loaded === 3) {
-    //         msg.innerHTML = msg.innerHTML + "<p>That's done; fries should be up in two seconds. (Note to self: hire more ferrets.)</p>";
-    //         createGrid();
-    //     }
-    // }
-
     PG.start = function() {
         Ext.History.init();
         // Handle this change event in order to restore the UI to the appropriate history state
@@ -260,67 +214,5 @@
             }
         });
     }
-
-    //     PG.loadMask = new Ext.LoadMask(Ext.getBody(), {
-    //         msg: '<h3>This may take a while...</h3>' +
-    //             '<p>The ferret is shovelling coal into the boiler as fast as he can.</p>' +
-    //             '<p id="loadmask">(Ok, technically, we\'re loading the gigantic blobs of data so that I don\'t have to pay for server time.)</p>'
-    //     });
-    //     PG.loadMask.show();
-
-    //     Ext.Ajax.request({
-    //         url: "styledata.json",
-    //         success: function(res, opt) {
-    //             PG.styleStore = new Ext.data.Store({
-    //                 storeId:     'styleStore',
-    //                 reader:      PG.styledataReader,
-    //                 data:        Ext.util.JSON.decode(res.responseText)
-    //             });
-    //             loadingCompleted();
-    //         },
-    //         failure: function(res, opt) {
-    //             Ext.Msg.alert("Error loading style data", "Cannot load data about book styles.");
-    //             console.log("styledata.json failure");
-    //         },
-    //         timeout: 60 * 1000,
-    //     });
-
-    //     Ext.Ajax.request({
-    //         url: "topicdata.json",
-    //         success: function(res, opt) {
-    //             PG.topicStore = new Ext.data.Store({
-    //                 autoLoad: false,
-    //                 storeId:  'topicStore',
-    //                 reader:   PG.topicdataReader,
-    //                 data:     Ext.util.JSON.decode(res.responseText)
-    //             });
-    //             loadingCompleted();
-    //         },
-    //         failure: function(res, opt) {
-    //             Ext.Msg.alert("Error loading topic data", "Cannot load data about book topics.");
-    //             console.log("topiddata.json failure");
-    //         },
-    //         timeout: 60 * 1000,
-    //     });
-
-    //     Ext.Ajax.request({
-    //         url: "metadata.json",
-    //         success: function(res, opt) {
-    //             PG.metadataStore = new Ext.data.Store({
-    //                 storeId:     'metadataStore',
-    //                 reader:      PG.metadataReader,
-    //                 remoteSort:  false,
-    //                 sortInfo:    { field:'author', direction:'ASC' },
-    //                 data:        Ext.util.JSON.decode(res.responseText),
-    //             });
-    //             loadingCompleted();
-    //         },
-    //         failure: function(res, opt) {
-    //             Ext.Msg.alert("Error loading metadata", "Cannot load general information about books.");
-    //             console.log("metadata.json failure");
-    //         },
-    //         timeout: 60 * 1000,
-    //     });
-    // }
     
 }());
