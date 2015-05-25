@@ -3,9 +3,6 @@
 
     Ext.namespace('PG');
 
-    function coalesce_conversion(name) { return function(v,rec) { return rec[name].join('; '); } }
-    function pick_first_conversion(name) { return function(v,rec) { return rec[name][0]; } }
-
     function startRequest(query, etext_no) {
         query.loadMask.show();
         query.transactionId = Ext.Ajax.request({
@@ -18,11 +15,36 @@
     }
 
     function selectBook(selectedBook) {
-        Ext.History.add(Ext.util.JSON.encode(selectedBook));
+        Ext.History.add('B' + Ext.util.JSON.encode(selectedBook));
+        selectedBook.distance = "";
         PG.bookTpl.overwrite(Ext.get('book-info'), selectedBook);
+        PG.style.reset();
         startRequest(PG.style, selectedBook.etext_no);
+        PG.topic.reset();
         startRequest(PG.topic, selectedBook.etext_no);
+        PG.combination.reset();
         startRequest(PG.combination, selectedBook.etext_no);
+    }
+
+    function displayResults(query, response) {
+        query.transactionId = undefined;
+        query.rows = query.rows.concat( Ext.decode(response.responseText).rows );
+        if (query.rows && query.rows.length) {
+            for (var i = 0; i < 3; ++i) {
+                var data = query.rows[query.current + i];
+                data.distance = data.dist.toFixed(3) + ' ' + query.metric;
+                var elt = Ext.get(query.eltBase + (i + 1));
+                PG.bookTpl.overwrite(elt, data);
+                elt.unmask();
+            }
+        } else {
+            for (var i = 0; i < 3; ++i) {
+                var elt = Ext.get(eltBase + (i+1));
+                elt.dom.innerHTML = i === 1 ? 'No results available' : '';
+                elt.mask();
+            }
+        }
+        query.loadMask.hide();
     }
 
     PG.bookTpl = new Ext.XTemplate(
@@ -51,33 +73,23 @@
 
     PG.style = {
         url: 'data/style',
+        eltBase: 'style',
+        metric: 'ell',
         transactionId: undefined,
-        rows: undefined,
+        rows: [],
         current: 1,
 
         loadMask: new Ext.LoadMask(Ext.get('style-row'), {
             msg: '<h3>Loading...</h3>'
         }),
 
+        reset: function() {
+            PG.style.rows = [];
+            PG.style.current = 1;
+        },
+
         success: function(response, options) {
-            PG.style.transactionId = undefined;
-            PG.style.rows = Ext.decode(response.responseText).rows;
-            if (PG.style.rows && PG.style.rows.length) {
-                for (var i = 1; i < 4; ++i) {
-                    var data = PG.style.rows[i];
-                    data.distance = data.dist.toFixed(3) + " ell";
-                    var elt = Ext.get('style' + i);
-                    elt.unmask();
-                    PG.bookTpl.overwrite(elt, data);
-                }
-            } else {
-                for (var i = 1; i < 4; ++i) {
-                    var elt = Ext.get('style' + i);
-                    elt.dom.innerHTML = '';
-                    elt.mask();
-                }
-            }
-            PG.style.loadMask.hide();
+            displayResults(PG.style, response);
         },
 
         failure: function(response, options) {
@@ -87,33 +99,23 @@
 
     PG.topic = {
         url: 'data/topic',
+        eltBase: 'topic',
+        metric: 'bole',
         transactionId: undefined,
-        rows: undefined,
+        rows: [],
         current: 1,
 
         loadMask: new Ext.LoadMask(Ext.get('topic-row'), {
             msg: '<h3>Loading...</h3>'
         }),
 
+        reset: function() {
+            PG.topic.rows = [];
+            PG.topic.current = 1;
+        },
+
         success: function(response, options) {
-            PG.topic.transactionId = undefined;
-            PG.topic.rows = Ext.decode(response.responseText).rows;
-            if (PG.topic.rows && PG.topic.rows.length) {
-                for (var i = 1; i < 4; ++i) {
-                    var data = PG.topic.rows[i];
-                    data.distance = data.score.toFixed(3) + " bole";
-                    var elt = Ext.get('topic' + i);
-                    elt.unmask();
-                    PG.bookTpl.overwrite(elt, data);
-                }
-            } else {
-                for (var i = 1; i < 4; ++i) {
-                    var elt = Ext.get('topic' + i);
-                    elt.dom.innerHTML = i === 2 ? 'No results available' : '';
-                    elt.mask();
-                }
-            }
-            PG.topic.loadMask.hide();
+            displayResults(PG.topic, response);
         },
 
         failure: function(response, options) {
@@ -124,34 +126,23 @@
 
     PG.combination = {
         url: 'data/combination',
+        eltBase: 'combined',
+        metric: 'ell bole',
         transactionId: undefined,
-        rows: undefined,
+        rows: [],
         current: 1,
 
         loadMask: new Ext.LoadMask(Ext.get('combined-row'), {
             msg: '<h3>Loading...</h3>'
         }),
 
+        reset: function() {
+            PG.combination.rows = [];
+            PG.combination.current = 1;
+        },
+
         success: function(response, options) {
-            PG.combination.transactionId = undefined;
-            PG.combination.rows = Ext.decode(response.responseText).rows;
-            if (PG.combination.rows && PG.combination.rows.length) {
-                for (var i = 1; i < 4; ++i) {
-                    var data = PG.combination.rows[i];
-                    data.distance = data.dist_score.toFixed(3) + " ell bole";
-                    var elt = Ext.get('combined' + i);
-                    PG.bookTpl.overwrite(elt, data);
-                    elt.unmask();
-                }
-            } else {
-                for (var i = 1; i < 4; ++i) {
-                    var elt = Ext.get('combined' + i);
-                    elt.dom.innerHTML = i === 2 ? 'No results available' : '';
-                    elt.mask();
-                }
-                
-            }
-            PG.combination.loadMask.hide();
+            displayResults(PG.combination, response);
         },
 
         failure: function(response, options) {
@@ -208,11 +199,14 @@
             if (PG.topic.transactionId) { Ext.Ajax.abort(PG.topic.transactionId); }
             if (PG.combination.transactionId) { Ext.Ajax.abort(PG.combination.transactionId); }
             if (token) {
-                selectBook(Ext.util.JSON.decode(token));
+                if (token.charAt(0) === 'B') {
+                    selectBook(Ext.util.JSON.decode(token.substr(1)));
+                }
             } else {
                 PG.text_searchbox.setValue('');
             }
         });
+        Ext.get('search').focus();
     }
     
 }());
