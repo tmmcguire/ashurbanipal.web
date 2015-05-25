@@ -70,7 +70,15 @@
                 for (var i = 1; i < 4; ++i) {
                     var data = PG.style.rows[i];
                     data.distance = data.dist.toFixed(3) + " ell";
-                    PG.bookTpl.overwrite(Ext.get('style' + i), data);
+                    var elt = Ext.get('style' + i);
+                    elt.unmask();
+                    PG.bookTpl.overwrite(elt, data);
+                }
+            } else {
+                for (var i = 1; i < 4; ++i) {
+                    var elt = Ext.get('style' + i);
+                    elt.dom.innerHTML = '';
+                    elt.mask();
                 }
             }
             PG.style.loadMask.hide();
@@ -98,7 +106,15 @@
                 for (var i = 1; i < 4; ++i) {
                     var data = PG.topic.rows[i];
                     data.distance = data.score.toFixed(3) + " bole";
-                    PG.bookTpl.overwrite(Ext.get('topic' + i), data);
+                    var elt = Ext.get('topic' + i);
+                    elt.unmask();
+                    PG.bookTpl.overwrite(elt, data);
+                }
+            } else {
+                for (var i = 1; i < 4; ++i) {
+                    var elt = Ext.get('topic' + i);
+                    elt.dom.innerHTML = i === 2 ? 'No results available' : '';
+                    elt.mask();
                 }
             }
             PG.topic.loadMask.hide();
@@ -127,8 +143,17 @@
                 for (var i = 1; i < 4; ++i) {
                     var data = PG.combination.rows[i];
                     data.distance = data.dist_score.toFixed(3) + " ell bole";
-                    PG.bookTpl.overwrite(Ext.get('combined' + i), data);
+                    var elt = Ext.get('combined' + i);
+                    PG.bookTpl.overwrite(elt, data);
+                    elt.unmask();
                 }
+            } else {
+                for (var i = 1; i < 4; ++i) {
+                    var elt = Ext.get('combined' + i);
+                    elt.dom.innerHTML = i === 2 ? 'No results available' : '';
+                    elt.mask();
+                }
+                
             }
             PG.combination.loadMask.hide();
         },
@@ -138,11 +163,6 @@
         }
 
     };
-
-    function cbSelectionChange(combo, record, index) {
-        if (!record) { return; }
-        selectBook(record.data);
-    }
 
     function selectBook(selectedBook) {
         Ext.History.add(Ext.util.JSON.encode(selectedBook));
@@ -169,7 +189,7 @@
 
     PG.text_searchbox = new Ext.form.ComboBox({
         store: PG.text_store,
-        displayField: 'title',
+//        displayField: 'title',
         loadingText: 'Searching...',
         width: 570,
         pageSize: 20,
@@ -178,7 +198,10 @@
         applyTo: 'search',
         itemSelector: 'div.search-item',
         listeners: {
-            'select': cbSelectionChange,
+            'select': function(combo, record, index) {
+                if (!record) { return; }
+                selectBook(record.data);
+            },
         },
     });
 
