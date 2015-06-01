@@ -1,6 +1,6 @@
 package net.crsr.ashurbanipal.web.resources;
 
-import static javax.ws.rs.core.Response.Status.*;
+import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -9,16 +9,16 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
@@ -26,6 +26,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
+import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -42,20 +43,22 @@ public class TextLookup {
 
   private static final String ROW_QUERY = "select * from book_metadata where position(? in upper(title)) > 0 or position(? in upper(author)) > 0 or position(? in upper(subject)) > 0 order by author, title, etext_no limit ? offset ?";
   private static final String COUNT_QUERY = "select count(*) as count from book_metadata where position(? in upper(title)) > 0 or position(? in upper(author)) > 0 or position(? in upper(subject)) > 0";
+  private static final String SINGLE_QUERY = "select * from book_metadata where etext_no = ?";
   
   private static final Logger log = LoggerFactory.getLogger(TextLookup.class);
   
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public JSONObject getQuery(@QueryParam("query") String searchTerm, @QueryParam("start") Integer start, @QueryParam("limit") Integer limit) {
+  public JSONObject getQuery(
+      @QueryParam("query") String searchTerm,
+      @QueryParam("start") @DefaultValue("0") Integer start,
+      @QueryParam("limit") @DefaultValue("20") Integer limit) {
     if (searchTerm == null) {
       final String message = "bad request: parameter query=\"search-term\" required";
       log.info(message);
       throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
     }
     final String upperSearchTerm = /* "%" + */ searchTerm.toUpperCase() /* + "%" */;
-    if (start == null) { start = 0; }
-    if (limit == null) { limit = 20; }
     Connection connection = null;
     try {
       final Context envCtx = (Context) new InitialContext().lookup("java:comp/env");
@@ -71,6 +74,33 @@ public class TextLookup {
       throw new InternalServerException("json exception", e);
     } catch (NamingException e) {
       throw new InternalServerException("jndi exception", e);
+    } finally {
+      if (connection != null) { try { connection.close(); } catch (SQLException e) { } }
+    }
+  }
+  
+  @Path("/{etext_no}")
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  public JSONObject getByEtextNo(@PathParam("etext_no") Integer etext_no) {
+    if (etext_no == null) {
+      final String message = "bad request: etext_no required";
+      log.info(message);
+      throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
+    }
+    Connection connection = null;
+    try {
+      final Context envCtx = (Context) new InitialContext().lookup("java:comp/env");
+      final DataSource dataSource = (DataSource) envCtx.lookup("jdbc/AshurbanipalDB");
+      connection = dataSource.getConnection();
+      final JSONObject results = singleBookQuery(connection, etext_no);
+      return results;
+    } catch (SQLException e) {
+      throw new InternalServerException("sql exception", e);
+    } catch (NamingException e) {
+      throw new InternalServerException("jndi exception", e);
+    } catch (JSONException e) {
+      throw new InternalServerException("json exception", e);
     } finally {
       if (connection != null) { try { connection.close(); } catch (SQLException e) { } }
     }
@@ -94,7 +124,7 @@ public class TextLookup {
     }
   }
   
-  private List<Map<String,Object>> rowQuery(Connection connection, String upperSearchTerm, Integer start, Integer limit) throws SQLException {
+  private List<JSONObject> rowQuery(Connection connection, String upperSearchTerm, Integer start, Integer limit) throws SQLException, JSONException {
     PreparedStatement statement = null;
     ResultSet resultSet = null;
     try {
@@ -105,26 +135,49 @@ public class TextLookup {
       resultSet = statement.executeQuery();
       final ResultSetMetaData metadata = resultSet.getMetaData();
       final int columns = metadata.getColumnCount();
-      final List<Map<String,Object>> results = new ArrayList<>();
+      final List<JSONObject> results = new ArrayList<>();
       while (resultSet.next()) {
-        final Map<String,Object> result = new HashMap<>();
-        results.add(result);
-        for (int i = 1; i <= columns; ++i) {
-          switch (metadata.getColumnType(i)) {
-            case Types.INTEGER:
-              result.put(metadata.getColumnLabel(i), resultSet.getInt(i));
-              break;
-            default:
-              result.put(metadata.getColumnLabel(i), resultSet.getString(i));
-              break;
-          }
-        }
+        results.add(rowToMap(metadata, columns, resultSet));
       }
       return results;
     } finally {
       if (resultSet != null) { try { resultSet.close(); } catch (SQLException e) { } }
       if (statement != null) { try { statement.close(); } catch (SQLException e) { } }
     }
+  }
+  
+  private JSONObject singleBookQuery(Connection connection, Integer etext_no) throws SQLException, JSONException {
+    PreparedStatement statement = null;
+    ResultSet resultSet = null;
+    try {
+      statement = connection.prepareStatement(SINGLE_QUERY);
+      statement.setInt(1, etext_no);
+      resultSet = statement.executeQuery();
+      if (resultSet.next()) {
+        final ResultSetMetaData metadata = resultSet.getMetaData();
+        return rowToMap(metadata, metadata.getColumnCount(), resultSet);
+      } else {
+        throw new ResultNotFound();
+      }
+    } finally {
+      if (resultSet != null) { try { resultSet.close(); } catch (SQLException e) { } }
+      if (statement != null) { try { statement.close(); } catch (SQLException e) { } }
+    }
+  }
+
+  private JSONObject rowToMap(final ResultSetMetaData metadata, final int columns, ResultSet resultSet) throws SQLException, JSONException {
+    final JSONObject result = new JSONObject();
+    for (int i = 1; i <= columns; ++i) {
+      switch (metadata.getColumnType(i)) {
+        case Types.INTEGER:
+          result.put(metadata.getColumnLabel(i), resultSet.getInt(i));
+          break;
+        default:
+          result.put(metadata.getColumnLabel(i), resultSet.getString(i));
+          break;
+      }
+    }
+    return result;
   }
 
   private void setSearchTerms(PreparedStatement statement, String upperSearchTerm) throws SQLException {

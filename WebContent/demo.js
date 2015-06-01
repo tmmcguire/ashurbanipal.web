@@ -14,42 +14,49 @@
         });
     }
 
-    function selectBook(selectedBook) {
-        Ext.History.add('B' + Ext.util.JSON.encode(selectedBook));
-        selectedBook.distance = "";
-        PG.bookTpl.overwrite(Ext.get('book-info'), selectedBook);
+    function selectBook(etext_no) {
+        var selectedBook = PG.text_store.getById(etext_no);
+        if (selectedBook) {
+            displaySelectedBook(selectedBook.data);
+        } else {
+            Ext.Ajax.request({
+                url: 'data/lookup/' + etext_no,
+                method: 'GET',
+                success: function(response, options) {
+                    displaySelectedBook( Ext.util.JSON.decode(response.responseText) );
+                    console.log(response);
+                },
+                failure: function(response, options) { /* do nothing */ },
+            });
+        }
+    }
+
+    function displaySelectedBook(book) {
+        book.distance = "";
+        PG.bookTpl.overwrite(Ext.get('book-info'), book);
         PG.style.reset();
-        startRequest(PG.style, selectedBook.etext_no);
+        startRequest(PG.style, book.etext_no);
         PG.topic.reset();
-        startRequest(PG.topic, selectedBook.etext_no);
+        startRequest(PG.topic, book.etext_no);
         PG.combination.reset();
-        startRequest(PG.combination, selectedBook.etext_no);
+        startRequest(PG.combination, book.etext_no);
     }
 
     function displayResults(query, response) {
         query.transactionId = undefined;
         query.rows = query.rows.concat( Ext.decode(response.responseText).rows );
         showResults(query);
-        // if (query.rows && query.rows.length) {
-        //     for (var i = 0; i < 3; ++i) {
-        //         var data = query.rows[query.current + i];
-        //         data.distance = data.dist.toFixed(3) + ' ' + query.metric;
-        //         var elt = Ext.get(query.eltBase + (i + 1));
-        //         PG.bookTpl.overwrite(elt, data);
-        //         elt.unmask();
-        //     }
-        // } else {
-        //     for (var i = 0; i < 3; ++i) {
-        //         var elt = Ext.get(eltBase + (i+1));
-        //         elt.dom.innerHTML = i === 1 ? 'No results available' : '';
-        //         elt.mask();
-        //     }
-        // }
         query.loadMask.hide();
     }
 
     function showResults(query) {
         if (query.rows && query.rows.length) {
+            if (query.current === 0) {
+                Ext.get(query.eltBase + '-left').hide();
+            } else {
+                Ext.get(query.eltBase + '-left').show();
+            }
+            Ext.get(query.eltBase + '-right').show();
             for (var i = 0; i < 3; ++i) {
                 var data = query.rows[query.current + i];
                 data.distance = data.dist.toFixed(3) + ' ' + query.metric;
@@ -58,9 +65,11 @@
                 elt.unmask();
             }
         } else {
+            Ext.get(query.eltBase + '-left').hide();
+            Ext.get(query.eltBase + '-right').hide();
             for (var i = 0; i < 3; ++i) {
-                var elt = Ext.get(eltBase + (i+1));
-                elt.dom.innerHTML = i === 1 ? 'No results available' : '';
+                var elt = Ext.get(query.eltBase + (i+1));
+                elt.dom.innerHTML = i === 1 ? 'No results available' : '&nbsp;';
                 elt.mask();
             }
         }
@@ -92,7 +101,7 @@
         '<p><em>{note}</em></p>',
         '<p>{copyright_status}</p>',
         '<p>Etext #{etext_no}</p>',
-        '<p><a href="{link}" style="text-decoration:none; color:#000000;" target="_blank">On to Project Gutenberg!</a></p>',
+        '<p><a href="{link}" style="text-decoration:none; color:#000000;" target="_blank"><b>On to Project Gutenberg!</b></a></p>',
         '<tpl if="distance"><hr /><p>{distance}</p></tpl>',
         '</div>'
     );
@@ -246,7 +255,7 @@
         listeners: {
             'select': function(combo, record, index) {
                 if (!record) { return; }
-                selectBook(record.data);
+                Ext.History.add(Ext.util.JSON.encode(record.data.etext_no));
             },
         },
     });
@@ -259,9 +268,7 @@
             if (PG.topic.transactionId) { Ext.Ajax.abort(PG.topic.transactionId); }
             if (PG.combination.transactionId) { Ext.Ajax.abort(PG.combination.transactionId); }
             if (token) {
-                if (token.charAt(0) === 'B') {
-                    selectBook(Ext.util.JSON.decode(token.substr(1)));
-                }
+                selectBook(Ext.util.JSON.decode(token));
             } else {
                 PG.text_searchbox.setValue('');
             }
@@ -272,6 +279,12 @@
         Ext.get('topic-right').on('click', PG.topic.right);
         Ext.get('combined-left').on('click', PG.combination.left);
         Ext.get('combined-right').on('click', PG.combination.right);
+
+        var token = Ext.util.JSON.decode( Ext.History.getToken() );
+        if (token) {
+            selectBook(token);
+        }
+
         Ext.get('search').focus();
     }
     
