@@ -9,6 +9,14 @@
         margin: 50px;
       }
 
+      h1 {
+        text-align: center;
+      }
+
+      img.arrow {
+        visibility: hidden;
+      }
+
       div.search-item {
         padding-top: .5ex;
         padding-bottom: .5ex;
@@ -53,15 +61,18 @@
   <body>
     <div class="app" id="app">
 
-      <div class="x-panel-header">Project Gutenberg 2010 DVD</div>
-
       <table>
         <tr>
+          <th colspan="5">
+            <h1>Project Gutenberg 2010 DVD</h1>
+          </th>
+        </tr>
+        <tr>
           <th colspan="3">
-            <span class="x-panel-header">Book Selection</span>
+            <h2>Book Selection</h2>
           </th>
           <th colspan="2">
-            <span class="x-panel-header">Details</span>
+            <h2>Details</h2>
           </th>
         </tr>
         <tr>
@@ -83,11 +94,13 @@
       <div id="style-row">
         <table>
           <tr>
-            <th colspan="5"><span class="x-panel-header">Style Recommendations</span></th>
+            <th colspan="5">
+              <h2>Style Recommendations</h2>
+            </th>
           </tr>
           <tr>
             <td>
-              <a href="#" id="style-left"><img src="left.svg" width="64" height="64"></a>
+              <img class="arrow" id="style-left" src="left.svg" width="64" height="64">
             </td>
             <td>
               <div id="style1" class="book"></div>
@@ -99,7 +112,7 @@
               <div id="style3" class="book"></div>
             </td>
             <td>
-              <a href="#" id="style-right"><img src="right.svg" width="64" height="64"></a>
+              <img class="arrow" id="style-right" src="right.svg" width="64" height="64">
             </td>
           </tr>
         </table>
@@ -108,11 +121,13 @@
       <div id="topic-row">
         <table>
           <tr>
-            <th colspan="5"><span class="x-panel-header">Topic Recommendations</span></th>
+            <th colspan="5">
+              <h2>Topic Recommendations</h2>
+            </th>
           </tr>
           <tr>
             <td>
-              <a href="#" id="topic-left"><img src="left.svg" width="64" height="64"></a>
+              <img class="arrow" id="topic-left" src="left.svg" width="64" height="64">
             </td>
             <td>
               <div id="topic1" class="book"></div>
@@ -124,7 +139,7 @@
               <div id="topic3" class="book"></div>
             </td>
             <td>
-              <a href="#" id="topic-right"><img src="right.svg" width="64" height="64"></a>
+              <img class="arrow" id="topic-right" src="right.svg" width="64" height="64">
             </td>
           </tr>
         </table>
@@ -133,11 +148,13 @@
       <div id="combined-row">
         <table>
           <tr>
-            <th colspan="5"><span class="x-panel-header">Combined Recommendations</span></th>
+            <th colspan="5">
+              <h2>Combined Recommendations</h2>
+            </th>
           </tr>
           <tr>
             <td>
-              <a href="#" id="combined-left"><img src="left.svg" width="64" height="64"></a>
+              <img class="arrow" id="combined-left" src="left.svg" width="64" height="64">
             </td>
             <td>
               <div id="combined1" class="book"></div>
@@ -149,7 +166,7 @@
               <div id="combined3" class="book"></div>
             </td>
             <td>
-              <a href="#" id="combined-right"><img src="right.svg" width="64" height="64"></a>
+              <img class="arrow" id="combined-right" src="right.svg" width="64" height="64">
             </td>
           </tr>
         </table>
