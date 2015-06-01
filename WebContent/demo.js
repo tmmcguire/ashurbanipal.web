@@ -3,6 +3,28 @@
 
     Ext.namespace('PG');
 
+    // Select a book, either by selection in the search combobox, by
+    // history token, or by a URL ending in '...#<etext_no>'.
+    function selectBook(etext_no) {
+        var selectedBook = PG.textSearchBox.getStore().getById(etext_no);
+        if (selectedBook) {
+            // Normal case: book's metadata is available in the
+            // combobox's store.
+            displaySelectedBook(selectedBook.data);
+        } else {
+            // Abnormal case: need to look up metadata.
+            Ext.Ajax.request({
+                url: 'data/lookup/' + etext_no,
+                method: 'GET',
+                success: function(response, options) {
+                    displaySelectedBook( Ext.util.JSON.decode(response.responseText) );
+                },
+                failure: function(response, options) { /* do nothing */ },
+            });
+        }
+    }
+
+    // Make a request for recommendations, based on the query object
     function startRequest(query, etext_no, start = 0, limit = 20) {
         query.loadMask.show();
         query.transactionId = Ext.Ajax.request({
@@ -14,23 +36,47 @@
         });
     }
 
-    function selectBook(etext_no) {
-        var selectedBook = PG.text_store.getById(etext_no);
-        if (selectedBook) {
-            displaySelectedBook(selectedBook.data);
+    // Complete a request for recommendations, based on a query object.
+    function displayResults(query, response) {
+        query.transactionId = undefined;
+        query.rows = query.rows.concat( Ext.decode(response.responseText).rows );
+        showResults(query);
+        query.loadMask.hide();
+    }
+
+    // Given an updated query object, update the UI state to show the
+    // recommendations.
+    function showResults(query) {
+        if (query.rows && query.rows.length) {
+            // Whoohoo! Valid data!
+            if (query.current === 0) {
+                Ext.get(query.eltBase + '-left').hide();
+            } else {
+                Ext.get(query.eltBase + '-left').show();
+            }
+            Ext.get(query.eltBase + '-right').show();
+            // Put a recommendation in an element.
+            for (var i = 0; i < 3; ++i) {
+                var data = query.rows[query.current + i];
+                data.distance = data.dist.toFixed(3) + ' ' + query.metric;
+                var elt = Ext.get(query.eltBase + (i + 1));
+                PG.bookTpl.overwrite(elt, data);
+                elt.unmask();
+            }
         } else {
-            Ext.Ajax.request({
-                url: 'data/lookup/' + etext_no,
-                method: 'GET',
-                success: function(response, options) {
-                    displaySelectedBook( Ext.util.JSON.decode(response.responseText) );
-                    console.log(response);
-                },
-                failure: function(response, options) { /* do nothing */ },
-            });
+            // Nope, nothing to see here.
+            Ext.get(query.eltBase + '-left').hide();
+            Ext.get(query.eltBase + '-right').hide();
+            for (var i = 0; i < 3; ++i) {
+                var elt = Ext.get(query.eltBase + (i+1));
+                elt.dom.innerHTML = i === 1 ? 'No results available' : '&nbsp;';
+                elt.mask();
+            }
         }
     }
 
+    // Show a selected book's metadata in the Details and trigger the
+    // request for recommendations.
     function displaySelectedBook(book) {
         book.distance = "";
         PG.bookTpl.overwrite(Ext.get('book-info'), book);
@@ -42,54 +88,27 @@
         startRequest(PG.combination, book.etext_no);
     }
 
-    function displayResults(query, response) {
-        query.transactionId = undefined;
-        query.rows = query.rows.concat( Ext.decode(response.responseText).rows );
-        showResults(query);
-        query.loadMask.hide();
-    }
-
-    function showResults(query) {
-        if (query.rows && query.rows.length) {
-            if (query.current === 0) {
-                Ext.get(query.eltBase + '-left').hide();
-            } else {
-                Ext.get(query.eltBase + '-left').show();
-            }
-            Ext.get(query.eltBase + '-right').show();
-            for (var i = 0; i < 3; ++i) {
-                var data = query.rows[query.current + i];
-                data.distance = data.dist.toFixed(3) + ' ' + query.metric;
-                var elt = Ext.get(query.eltBase + (i + 1));
-                PG.bookTpl.overwrite(elt, data);
-                elt.unmask();
-            }
-        } else {
-            Ext.get(query.eltBase + '-left').hide();
-            Ext.get(query.eltBase + '-right').hide();
-            for (var i = 0; i < 3; ++i) {
-                var elt = Ext.get(query.eltBase + (i+1));
-                elt.dom.innerHTML = i === 1 ? 'No results available' : '&nbsp;';
-                elt.mask();
-            }
-        }
-    }
-
+    // A recommendation's left-arrow has been clicked, display
+    // lower-valued recommendations.
     function rotateLeft(query) {
         query.current -= 2;
         if (query.current < 0) { query.current = 0; }
         showResults(query);
     }
 
+    // A recommendation's right-arrow has been clicked, display
+    // higher-valued recommendations.
     function rotateRight(query) {
         query.current += 2;
         if (query.current + 3 > query.rows.length) {
-            startRequest(query, PG.text_searchbox.getStore().getAt(0).id, query.rows.length);
+            // If the current search data does not include higher elements, request more.
+            startRequest(query, PG.textSearchBox.getStore().getAt(0).id, query.rows.length);
         } else {
             showResults(query);
         }
     }
 
+    // Template for displaying a book's metadata.
     PG.bookTpl = new Ext.XTemplate(
         '<div class="book-details">',
         '<p><b><i>{title},</i></b></p>',
@@ -106,6 +125,7 @@
         '</div>'
     );
 
+    // Template used by the search combobox to display a book.
     PG.text_tmpl = new Ext.XTemplate(
         '<tpl for="."><div class="search-item">',
         '<b><i>{title}</i></b>',
@@ -115,6 +135,7 @@
         '</div></tpl>'
     );
 
+    // Style recommendations.
     PG.style = {
         url: 'data/style',
         eltBase: 'style',
@@ -123,30 +144,20 @@
         rows: [],
         current: 1,
 
-        loadMask: new Ext.LoadMask(Ext.get('style-row'), {
-            msg: '<h3>Loading...</h3>'
-        }),
+        loadMask: new Ext.LoadMask(Ext.get('style-row'), { msg: '<h3>Loading...</h3>' }),
 
         reset: function() {
             PG.style.rows = [];
             PG.style.current = 1;
         },
 
-        success: function(response, options) {
-            displayResults(PG.style, response);
-        },
+        // Recommendation request handlers
+        success: function(response, options) { displayResults(PG.style, response); },
+        failure: function(response, options) { PG.style.transactionId = undefined; },
 
-        failure: function(response, options) {
-            PG.style.transactionId = undefined;
-        },
-
-        left: function(event, target) {
-            rotateLeft(PG.style);
-        },
-
-        right: function(event, target) {
-            rotateRight(PG.style);
-        },
+        // Left/right arrow handlers
+        left: function(event, target) { rotateLeft(PG.style); },
+        right: function(event, target) { rotateRight(PG.style); },
     };
 
     PG.topic = {
@@ -157,30 +168,20 @@
         rows: [],
         current: 1,
 
-        loadMask: new Ext.LoadMask(Ext.get('topic-row'), {
-            msg: '<h3>Loading...</h3>'
-        }),
+        loadMask: new Ext.LoadMask(Ext.get('topic-row'), { msg: '<h3>Loading...</h3>' }),
 
         reset: function() {
             PG.topic.rows = [];
             PG.topic.current = 1;
         },
 
-        success: function(response, options) {
-            displayResults(PG.topic, response);
-        },
+        // Recommendation request handlers
+        success: function(response, options) { displayResults(PG.topic, response); },
+        failure: function(response, options) { PG.topic.transactionId = undefined; },
 
-        failure: function(response, options) {
-            PG.topic.transactionId = undefined;
-        },
-
-        left: function(event, target) {
-            rotateLeft(PG.topic);
-        },
-
-        right: function(event, target) {
-            rotateRight(PG.topic);
-        },
+        // Left/right arrow handlers
+        left: function(event, target) { rotateLeft(PG.topic); },
+        right: function(event, target) { rotateRight(PG.topic); },
 
     };
 
@@ -192,34 +193,24 @@
         rows: [],
         current: 1,
 
-        loadMask: new Ext.LoadMask(Ext.get('combined-row'), {
-            msg: '<h3>Loading...</h3>'
-        }),
+        loadMask: new Ext.LoadMask(Ext.get('combined-row'), { msg: '<h3>Loading...</h3>' }),
 
         reset: function() {
             PG.combination.rows = [];
             PG.combination.current = 1;
         },
 
-        success: function(response, options) {
-            displayResults(PG.combination, response);
-        },
+        // Recommendation request handlers
+        success: function(response, options) { displayResults(PG.combination, response); },
+        failure: function(response, options) { PG.combination.transactionId = undefined; },
 
-        failure: function(response, options) {
-            PG.combination.transactionId = undefined;
-        },
-
-        left: function(event, target) {
-            rotateLeft(PG.combination);
-        },
-
-        right: function(event, target) {
-            rotateRight(PG.combination);
-        },
+        // Left/right arrow handlers
+        left: function(event, target) { rotateLeft(PG.combination); },
+        right: function(event, target) { rotateRight(PG.combination); },
 
     };
 
-    PG.text_store = new Ext.data.Store({
+    var textStore = new Ext.data.Store({
         proxy: new Ext.data.HttpProxy({
             url: 'data/lookup',
             method: 'GET',
@@ -242,8 +233,8 @@
         ]),
     });
 
-    PG.text_searchbox = new Ext.form.ComboBox({
-        store: PG.text_store,
+    PG.textSearchBox = new Ext.form.ComboBox({
+        store: textStore,
         loadingText: 'Searching...',
         width: 570,
         pageSize: 20,
@@ -254,8 +245,9 @@
         valueField: 'etext_no',
         listeners: {
             'select': function(combo, record, index) {
-                if (!record) { return; }
-                Ext.History.add(Ext.util.JSON.encode(record.data.etext_no));
+                if (record && record.data) {
+                    Ext.History.add(Ext.util.JSON.encode(record.data.etext_no));
+                }
             },
         },
     });
@@ -270,9 +262,10 @@
             if (token) {
                 selectBook(Ext.util.JSON.decode(token));
             } else {
-                PG.text_searchbox.setValue('');
+                PG.textSearchBox.setValue('');
             }
         });
+        
         Ext.get('style-left').on('click', PG.style.left);
         Ext.get('style-right').on('click', PG.style.right);
         Ext.get('topic-left').on('click', PG.topic.left);
