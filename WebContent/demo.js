@@ -3,14 +3,14 @@
 
     Ext.namespace('PG');
 
-    function startRequest(query, etext_no) {
+    function startRequest(query, etext_no, start = 0, limit = 20) {
         query.loadMask.show();
         query.transactionId = Ext.Ajax.request({
             url: query.url,
             method: 'GET',
             success: query.success,
             failure: query.failure,
-            params: { etext_no: etext_no, start: 0, limit: 20 }
+            params: { etext_no: etext_no, start: start, limit: limit }
         });
     }
 
@@ -29,6 +29,26 @@
     function displayResults(query, response) {
         query.transactionId = undefined;
         query.rows = query.rows.concat( Ext.decode(response.responseText).rows );
+        showResults(query);
+        // if (query.rows && query.rows.length) {
+        //     for (var i = 0; i < 3; ++i) {
+        //         var data = query.rows[query.current + i];
+        //         data.distance = data.dist.toFixed(3) + ' ' + query.metric;
+        //         var elt = Ext.get(query.eltBase + (i + 1));
+        //         PG.bookTpl.overwrite(elt, data);
+        //         elt.unmask();
+        //     }
+        // } else {
+        //     for (var i = 0; i < 3; ++i) {
+        //         var elt = Ext.get(eltBase + (i+1));
+        //         elt.dom.innerHTML = i === 1 ? 'No results available' : '';
+        //         elt.mask();
+        //     }
+        // }
+        query.loadMask.hide();
+    }
+
+    function showResults(query) {
         if (query.rows && query.rows.length) {
             for (var i = 0; i < 3; ++i) {
                 var data = query.rows[query.current + i];
@@ -44,11 +64,25 @@
                 elt.mask();
             }
         }
-        query.loadMask.hide();
+    }
+
+    function rotateLeft(query) {
+        query.current -= 2;
+        if (query.current < 0) { query.current = 0; }
+        showResults(query);
+    }
+
+    function rotateRight(query) {
+        query.current += 2;
+        if (query.current + 3 > query.rows.length) {
+            startRequest(query, PG.text_searchbox.getStore().getAt(0).id, query.rows.length);
+        } else {
+            showResults(query);
+        }
     }
 
     PG.bookTpl = new Ext.XTemplate(
-        '<div class="book-details"><a href="{link}" style="text-decoration:none; color:#000000;" target="_blank">',
+        '<div class="book-details">',
         '<p><b><i>{title},</i></b></p>',
         '<p><b>{author}</b></p>',
         '<p>{subject}</p>',
@@ -58,8 +92,9 @@
         '<p><em>{note}</em></p>',
         '<p>{copyright_status}</p>',
         '<p>Etext #{etext_no}</p>',
+        '<p><a href="{link}" style="text-decoration:none; color:#000000;" target="_blank">On to Project Gutenberg!</a></p>',
         '<tpl if="distance"><hr /><p>{distance}</p></tpl>',
-        '</a></div>'
+        '</div>'
     );
 
     PG.text_tmpl = new Ext.XTemplate(
@@ -94,7 +129,15 @@
 
         failure: function(response, options) {
             PG.style.transactionId = undefined;
-        }
+        },
+
+        left: function(event, target) {
+            rotateLeft(PG.style);
+        },
+
+        right: function(event, target) {
+            rotateRight(PG.style);
+        },
     };
 
     PG.topic = {
@@ -120,7 +163,15 @@
 
         failure: function(response, options) {
             PG.topic.transactionId = undefined;
-        }
+        },
+
+        left: function(event, target) {
+            rotateLeft(PG.topic);
+        },
+
+        right: function(event, target) {
+            rotateRight(PG.topic);
+        },
 
     };
 
@@ -147,7 +198,15 @@
 
         failure: function(response, options) {
             PG.combination.transactionId = undefined;
-        }
+        },
+
+        left: function(event, target) {
+            rotateLeft(PG.combination);
+        },
+
+        right: function(event, target) {
+            rotateRight(PG.combination);
+        },
 
     };
 
@@ -183,6 +242,7 @@
         tpl: PG.text_tmpl,
         applyTo: 'search',
         itemSelector: 'div.search-item',
+        valueField: 'etext_no',
         listeners: {
             'select': function(combo, record, index) {
                 if (!record) { return; }
@@ -206,6 +266,12 @@
                 PG.text_searchbox.setValue('');
             }
         });
+        Ext.get('style-left').on('click', PG.style.left);
+        Ext.get('style-right').on('click', PG.style.right);
+        Ext.get('topic-left').on('click', PG.topic.left);
+        Ext.get('topic-right').on('click', PG.topic.right);
+        Ext.get('combined-left').on('click', PG.combination.left);
+        Ext.get('combined-right').on('click', PG.combination.right);
         Ext.get('search').focus();
     }
     
