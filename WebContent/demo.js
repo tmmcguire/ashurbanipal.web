@@ -34,7 +34,7 @@
         } else {
             // Abnormal case: need to look up metadata.
             Ext.Ajax.request({
-                url: 'data/lookup/' + etext_no,
+                url: 'data/file/lookup/' + etext_no,
                 method: 'GET',
                 success: function(response, options) {
                     displaySelectedBook( Ext.util.JSON.decode(response.responseText) );
@@ -45,14 +45,14 @@
     }
 
     // Make a request for recommendations, based on the query object
-    function startRequest(query, etext_no, start = 0, limit = 20) {
+    function startRequest(query, start = 0, limit = 20) {
         query.loadMask.show();
         query.transactionId = Ext.Ajax.request({
             url: query.url,
             method: 'GET',
             success: query.success,
             failure: query.failure,
-            params: { etext_no: etext_no, start: start, limit: limit }
+            params: { etext_no: query.etext_no, start: start, limit: limit }
         });
     }
 
@@ -100,12 +100,12 @@
     function displaySelectedBook(book) {
         book.distance = "";
         PG.bookTpl.overwrite(Ext.get('book-info'), book);
-        PG.style.reset();
-        startRequest(PG.style, book.etext_no);
-        PG.topic.reset();
-        startRequest(PG.topic, book.etext_no);
-        PG.combination.reset();
-        startRequest(PG.combination, book.etext_no);
+        PG.style.reset(book.etext_no);
+        startRequest(PG.style);
+        PG.topic.reset(book.etext_no);
+        startRequest(PG.topic);
+        PG.combination.reset(book.etext_no);
+        startRequest(PG.combination);
     }
 
     // A recommendation's left-arrow has been clicked, display
@@ -122,7 +122,7 @@
         query.current += 2;
         if (query.current + 3 > query.rows.length) {
             // If the current search data does not include higher elements, request more.
-            startRequest(query, PG.textSearchBox.getStore().getAt(0).id, query.rows.length);
+            startRequest(query, query.rows.length);
         } else {
             showResults(query);
         }
@@ -157,18 +157,20 @@
 
     // Style recommendations.
     PG.style = {
-        url: 'data/style',
+        url: 'data/file/style',
         eltBase: 'style',
         metric: 'ell',
         transactionId: undefined,
+        etext_no: undefined,
         rows: [],
         current: 1,
 
         loadMask: new Ext.LoadMask(Ext.get('style-row'), { msg: '<h3>Loading...</h3>' }),
 
-        reset: function() {
+        reset: function(etext_no) {
             PG.style.rows = [];
             PG.style.current = 1;
+            PG.style.etext_no = etext_no;
         },
 
         // Recommendation request handlers
@@ -185,14 +187,16 @@
         eltBase: 'topic',
         metric: 'bole',
         transactionId: undefined,
+        etext_no: undefined,
         rows: [],
         current: 1,
 
         loadMask: new Ext.LoadMask(Ext.get('topic-row'), { msg: '<h3>Loading...</h3>' }),
 
-        reset: function() {
+        reset: function(etext_no) {
             PG.topic.rows = [];
             PG.topic.current = 1;
+            PG.topic.etext_no = etext_no;
         },
 
         // Recommendation request handlers
@@ -210,14 +214,16 @@
         eltBase: 'combined',
         metric: 'ell bole',
         transactionId: undefined,
+        etext_no: undefined,
         rows: [],
         current: 1,
 
         loadMask: new Ext.LoadMask(Ext.get('combined-row'), { msg: '<h3>Loading...</h3>' }),
 
-        reset: function() {
+        reset: function(etext_no) {
             PG.combination.rows = [];
             PG.combination.current = 1;
+            PG.combination.etext_no = etext_no;
         },
 
         // Recommendation request handlers
