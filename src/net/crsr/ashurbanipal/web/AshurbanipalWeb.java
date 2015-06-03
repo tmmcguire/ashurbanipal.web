@@ -28,21 +28,24 @@ import javax.ws.rs.core.Application;
 
 import net.crsr.ashurbanipal.web.resources.CombinationList;
 import net.crsr.ashurbanipal.web.resources.FileStyleList;
-import net.crsr.ashurbanipal.web.resources.FileTextLookup;
+import net.crsr.ashurbanipal.web.resources.FileMetadataLookup;
+import net.crsr.ashurbanipal.web.resources.FileTopicRecommendations;
 import net.crsr.ashurbanipal.web.resources.StyleList;
 import net.crsr.ashurbanipal.web.resources.TextLookup;
 import net.crsr.ashurbanipal.web.resources.TopicList;
 
 public class AshurbanipalWeb extends Application {
 
-  public static final FileTextLookup FILE_TEXT_LOOKUP = new FileTextLookup();
+  public static final FileMetadataLookup METADATA_LOOKUP = new FileMetadataLookup();
+  public static final FileTopicRecommendations TOPIC_RECOMMENDATIONS = new FileTopicRecommendations();
 
   @Override
   public Set<Object> getSingletons() {
     return new HashSet<Object>(
         Arrays.asList(
             new FileStyleList(),
-            FILE_TEXT_LOOKUP
+            METADATA_LOOKUP,
+            TOPIC_RECOMMENDATIONS
             )
         );
   }
