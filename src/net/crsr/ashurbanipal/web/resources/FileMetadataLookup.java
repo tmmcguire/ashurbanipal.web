@@ -28,15 +28,15 @@ import org.slf4j.LoggerFactory;
 
 @Path("/file/lookup")
 @Workspace(workspaceTitle="Text Lookup", collectionTitle="Author, Title, Subject query")
-public class FileTextLookup {
+public class FileMetadataLookup {
 
   private static final String METADATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.metadata";
 
-  private static final Logger log = LoggerFactory.getLogger(FileTextLookup.class);
+  private static final Logger log = LoggerFactory.getLogger(FileMetadataLookup.class);
   
   final Map<Integer,JSONObject> metadata = new HashMap<>();
   
-  public FileTextLookup() {
+  public FileMetadataLookup() {
     BufferedReader br = null;
     try {
       br = new BufferedReader(new InputStreamReader(FileStyleList.class.getClassLoader().getResourceAsStream(METADATA)));
@@ -50,9 +50,8 @@ public class FileTextLookup {
         final int etext_no = Integer.parseInt(values[0]);
         if (!metadata.containsKey(etext_no)) {
           // Only retain the first occurrence of an etext. This data needs cleaning.
-          final JSONObject record = new JSONObject();
+          final JSONObject record = new JSONObject().put("etext_no", etext_no);
           metadata.put(etext_no, record);
-          record.put("etext_no", etext_no);
           for (int i = 1; i < values.length; ++i) {
             record.put(columns[i], values[i]);
           }
