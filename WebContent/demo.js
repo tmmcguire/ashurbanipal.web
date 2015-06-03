@@ -64,9 +64,15 @@
         query.loadMask.hide();
     }
 
+    function displayError(query, response) {
+        query.transactionId = undefined;
+        showResults(query, response.responseText ? response.responseText : response.statusText);
+        query.loadMask.hide();
+    }        
+
     // Given an updated query object, update the UI state to show the
     // recommendations.
-    function showResults(query) {
+    function showResults(query, message='No results available') {
         if (query.rows && query.rows.length) {
             // Whoohoo! Valid data!
             if (query.current === 0) {
@@ -89,7 +95,7 @@
             Ext.get(query.eltBase + '-right').hide();
             for (var i = 0; i < 3; ++i) {
                 var elt = Ext.get(query.eltBase + (i+1));
-                elt.dom.innerHTML = i === 1 ? 'No results available' : '&nbsp;';
+                elt.dom.innerHTML = i === 1 ? message : '&nbsp;';
                 elt.mask();
             }
         }
@@ -175,7 +181,7 @@
 
         // Recommendation request handlers
         success: function(response, options) { displayResults(PG.style, response); },
-        failure: function(response, options) { PG.style.transactionId = undefined; },
+        failure: function(response, options) { displayError(PG.style, response); },
 
         // Left/right arrow handlers
         left: function(event, target) { rotateLeft(PG.style); },
@@ -183,7 +189,7 @@
     };
 
     PG.topic = {
-        url: 'data/topic',
+        url: 'data/file/topic',
         eltBase: 'topic',
         metric: 'bole',
         transactionId: undefined,
@@ -201,7 +207,7 @@
 
         // Recommendation request handlers
         success: function(response, options) { displayResults(PG.topic, response); },
-        failure: function(response, options) { PG.topic.transactionId = undefined; },
+        failure: function(response, options) { displayError(PG.style, response); },
 
         // Left/right arrow handlers
         left: function(event, target) { rotateLeft(PG.topic); },
@@ -228,7 +234,7 @@
 
         // Recommendation request handlers
         success: function(response, options) { displayResults(PG.combination, response); },
-        failure: function(response, options) { PG.combination.transactionId = undefined; },
+        failure: function(response, options) { displayError(PG.style, response); },
 
         // Left/right arrow handlers
         left: function(event, target) { rotateLeft(PG.combination); },
