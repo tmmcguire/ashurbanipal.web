@@ -1,3 +1,23 @@
+/*
+ * ashurbanipal.web: Java Servlet-based interface to Ashurbanipal data
+ * Copyright 2015 Tommy M. McGuire
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301 USA.
+ */
+
 package net.crsr.ashurbanipal.web.resources;
 
 import java.io.BufferedReader;
@@ -20,7 +40,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import net.crsr.ashurbanipal.web.AshurbanipalWeb;
+import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
+import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -79,32 +101,38 @@ public class FileStyleList {
   public JSONObject getRecommendations(
       @QueryParam("etext_no") Integer etext_no,
       @QueryParam("start") @DefaultValue("0") Integer start,
-      @QueryParam("limit") @DefaultValue("20")Integer limit) {
+      @QueryParam("limit") @DefaultValue("20")Integer limit
+      ) {
+    if (etext_no == null) {
+      throw new BadRequest("Bad request: parameter etext_no=\"search-term\" required");
+    }
 
     try {
-      final List<DistanceResult> allRows = euclidianDistances(etextToRow.get(etext_no));
+      final List<DistanceResult> allRows = euclidianDistances(etext_no);
       Collections.sort(allRows);
       
       final List<JSONObject> rows = new ArrayList<>(limit);
       for (DistanceResult distance : allRows.subList(start, start + limit)) {
-        final JSONObject row = new JSONObject();
+        final JSONObject row = new JSONObject().put("dist", distance.distance);
         rows.add(row);
-        row.put("dist", distance.distance);
-        final JSONObject metadata = AshurbanipalWeb.FILE_TEXT_LOOKUP.getByEtextNo(distance.etext_no);
+        final JSONObject metadata = AshurbanipalWeb.METADATA_LOOKUP.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
           row.put(key, metadata.get(key));
         }
       }
 
-      final JSONObject result = new JSONObject();
-      result.put("rows", rows);
-      return result;
+      return new JSONObject().put("rows", rows);
     } catch (JSONException e) {
       throw new InternalServerException(e);
     }
   }
   
-  public List<DistanceResult> euclidianDistances(int row) throws JSONException {
+  public List<DistanceResult> euclidianDistances(int etext_no) throws JSONException {
+    final Integer row = etextToRow.get(etext_no);
+    if (row == null) {
+      throw new ResultNotFound("No style data found for Etext #" + etext_no);
+    }
+
     final double[] distances = new double[posMatrix.length];
     
     for (int i = 0; i < posMatrix.length; ++i) {
@@ -116,8 +144,8 @@ public class FileStyleList {
       distances[i] = Math.sqrt(distances[i]);
     }
     
-    final List<DistanceResult> results = new ArrayList<>(posMatrix.length);
-    for (int i = 0; i < posMatrix.length; ++i) {
+    final List<DistanceResult> results = new ArrayList<>(distances.length);
+    for (int i = 0; i < distances.length; ++i) {
       results.add(new DistanceResult(rowToEtext.get(i), distances[i]));
     }
     return results;
