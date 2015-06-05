@@ -50,7 +50,7 @@ import org.json.JSONObject;
 
 @Path("/file/style")
 @Workspace(workspaceTitle="Text Metrics", collectionTitle="Text style")
-public class FileStyleList {
+public class FileStyleRecommendations {
   
   private static final String POS_DATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.pos";
 
@@ -58,11 +58,11 @@ public class FileStyleList {
   final private Map<Integer,Integer> rowToEtext = new HashMap<>();
   final private double[][] posMatrix;
 
-  public FileStyleList() {
+  public FileStyleRecommendations() {
     BufferedReader br = null;
     try {
 
-      br = new BufferedReader(new InputStreamReader(FileStyleList.class.getClassLoader().getResourceAsStream(POS_DATA)));
+      br = new BufferedReader(new InputStreamReader(FileStyleRecommendations.class.getClassLoader().getResourceAsStream(POS_DATA)));
 
       final List<List<String>> temporary = new ArrayList<>();
       final Set<Integer> seenEtext = new HashSet<>();

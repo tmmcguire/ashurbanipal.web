@@ -27,7 +27,7 @@ import java.util.Set;
 import javax.ws.rs.core.Application;
 
 import net.crsr.ashurbanipal.web.resources.CombinationList;
-import net.crsr.ashurbanipal.web.resources.FileStyleList;
+import net.crsr.ashurbanipal.web.resources.FileStyleRecommendations;
 import net.crsr.ashurbanipal.web.resources.FileMetadataLookup;
 import net.crsr.ashurbanipal.web.resources.FileTopicRecommendations;
 import net.crsr.ashurbanipal.web.resources.StyleList;
@@ -37,13 +37,14 @@ import net.crsr.ashurbanipal.web.resources.TopicList;
 public class AshurbanipalWeb extends Application {
 
   public static final FileMetadataLookup METADATA_LOOKUP = new FileMetadataLookup();
+  private static final FileStyleRecommendations STYLE_RECOMMENDATIONS = new FileStyleRecommendations();
   public static final FileTopicRecommendations TOPIC_RECOMMENDATIONS = new FileTopicRecommendations();
 
   @Override
   public Set<Object> getSingletons() {
     return new HashSet<Object>(
         Arrays.asList(
-            new FileStyleList(),
+            STYLE_RECOMMENDATIONS,
             METADATA_LOOKUP,
             TOPIC_RECOMMENDATIONS
             )
