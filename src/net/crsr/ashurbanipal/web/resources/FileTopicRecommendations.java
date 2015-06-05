@@ -65,7 +65,7 @@ public class FileTopicRecommendations {
     BufferedReader br = null;
     try {
 
-      br = new BufferedReader(new InputStreamReader(FileStyleRecommendations.class.getClassLoader().getResourceAsStream(TOPIC_DATA)));
+      br = new BufferedReader(new InputStreamReader(FileTopicRecommendations.class.getClassLoader().getResourceAsStream(TOPIC_DATA)));
 
       String line = br.readLine();
       while (line != null) {

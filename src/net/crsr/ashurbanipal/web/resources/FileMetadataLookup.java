@@ -39,7 +39,7 @@ public class FileMetadataLookup {
   public FileMetadataLookup() {
     BufferedReader br = null;
     try {
-      br = new BufferedReader(new InputStreamReader(FileStyleRecommendations.class.getClassLoader().getResourceAsStream(METADATA)));
+      br = new BufferedReader(new InputStreamReader(FileMetadataLookup.class.getClassLoader().getResourceAsStream(METADATA)));
 
       String line = br.readLine();
       final String[] columns = line.split("\t");
