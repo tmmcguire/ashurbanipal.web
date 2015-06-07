@@ -20,8 +20,6 @@
 
 package net.crsr.ashurbanipal.web.resources;
 
-import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,25 +36,20 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import net.crsr.ashurbanipal.web.AshurbanipalWeb;
+import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Path("/file/topic")
 @Workspace(workspaceTitle="Text Metrics", collectionTitle="Text topics")
 public class FileTopicRecommendations {
 
-  private static final Logger log = LoggerFactory.getLogger(FileTopicRecommendations.class);
-  
   private static final String TOPIC_DATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.nouns";
 
   final private Map<Integer,BigInteger> topicSets = new HashMap<>();
@@ -97,17 +90,15 @@ public class FileTopicRecommendations {
       @QueryParam("limit") @DefaultValue("20") Integer limit
       ) {
     if (etext_no == null) {
-      final String message = "bad request: parameter etext_no=\"search-term\" required";
-      log.info(message);
-      throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
+      throw new BadRequest("bad request: parameter etext_no required");
     }
     
     try {
-      final List<TopicResult> allRows = topicDistances(etext_no);
+      final List<DistanceResult> allRows = topicDistances(etext_no);
       Collections.sort(allRows);
       
       final List<JSONObject> rows = new ArrayList<>(limit);
-      for (TopicResult distance : allRows.subList(start, start + limit)) {
+      for (DistanceResult distance : allRows.subList(start, start + limit)) {
         final JSONObject row = new JSONObject().put("dist", distance.distance);
         rows.add(row);
         final JSONObject metadata = AshurbanipalWeb.METADATA_LOOKUP.getByEtextNo(distance.etext_no);
@@ -123,30 +114,15 @@ public class FileTopicRecommendations {
   }
   
   // Uses the Jaccard distance between the two topic sets.
-  public List<TopicResult> topicDistances(int etext_no) {
+  public List<DistanceResult> topicDistances(int etext_no) {
     final BigInteger thisBitSet = topicSets.get(etext_no);
-    final List<TopicResult> results = new ArrayList<>(topicSets.size());
+    final List<DistanceResult> results = new ArrayList<>(topicSets.size());
     for (Map.Entry<Integer,BigInteger> entry : topicSets.entrySet()) {
       final double intersect = thisBitSet.and(entry.getValue()).bitCount();
       final double union = thisBitSet.or(entry.getValue()).bitCount();
-      results.add(new TopicResult(entry.getKey(), (union - intersect) / union));
+      results.add(new DistanceResult(entry.getKey(), (union - intersect) / union));
     }
     return results;
-  }
-  
-  public static class TopicResult implements Comparable<TopicResult> {
-    public final int etext_no;
-    public final double distance;
-    
-    public TopicResult(int etext_no, double distance) {
-      this.etext_no = etext_no;
-      this.distance = distance;
-    }
-
-    @Override
-    public int compareTo(TopicResult other) {
-      return Double.compare(this.distance, other.distance);
-    }
   }
   
 }

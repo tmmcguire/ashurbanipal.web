@@ -104,7 +104,7 @@ public class FileStyleRecommendations {
       @QueryParam("limit") @DefaultValue("20")Integer limit
       ) {
     if (etext_no == null) {
-      throw new BadRequest("Bad request: parameter etext_no=\"search-term\" required");
+      throw new BadRequest("Bad request: parameter etext_no required");
     }
 
     try {
@@ -127,7 +127,7 @@ public class FileStyleRecommendations {
     }
   }
   
-  public List<DistanceResult> euclidianDistances(int etext_no) throws JSONException {
+  public List<DistanceResult> euclidianDistances(int etext_no) {
     final Integer row = etextToRow.get(etext_no);
     if (row == null) {
       throw new ResultNotFound("No style data found for Etext #" + etext_no);
@@ -149,21 +149,6 @@ public class FileStyleRecommendations {
       results.add(new DistanceResult(rowToEtext.get(i), distances[i]));
     }
     return results;
-  }
-  
-  public static class DistanceResult implements Comparable<DistanceResult> {
-    public final int etext_no;
-    public final double distance;
-    
-    public DistanceResult(int etext_no, double distance) {
-      this.etext_no = etext_no;
-      this.distance = distance;
-    }
-
-    @Override
-    public int compareTo(DistanceResult other) {
-      return Double.compare(this.distance, other.distance);
-    }
   }
   
 }
