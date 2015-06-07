@@ -38,9 +38,13 @@ import net.crsr.ashurbanipal.web.resources.TopicList;
 public class AshurbanipalWeb extends Application {
 
   public static final FileMetadataLookup METADATA_LOOKUP = new FileMetadataLookup();
-  public static final FileStyleRecommendations STYLE_RECOMMENDATIONS = new FileStyleRecommendations();
-  public static final FileTopicRecommendations TOPIC_RECOMMENDATIONS = new FileTopicRecommendations();
-  public static final FileCombinationRecommendations COMBINED_RECOMMENDATIONS = new FileCombinationRecommendations();
+  public static final FileStyleRecommendations STYLE_RECOMMENDATIONS = new FileStyleRecommendations(METADATA_LOOKUP);
+  public static final FileTopicRecommendations TOPIC_RECOMMENDATIONS = new FileTopicRecommendations(METADATA_LOOKUP);
+  public static final FileCombinationRecommendations COMBINED_RECOMMENDATIONS = new FileCombinationRecommendations(
+      METADATA_LOOKUP,
+      STYLE_RECOMMENDATIONS,
+      TOPIC_RECOMMENDATIONS
+      );
 
   @Override
   public Set<Object> getSingletons() {

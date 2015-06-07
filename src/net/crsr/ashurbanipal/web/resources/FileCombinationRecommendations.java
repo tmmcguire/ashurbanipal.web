@@ -11,7 +11,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import net.crsr.ashurbanipal.web.AshurbanipalWeb;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 
@@ -22,6 +21,20 @@ import org.json.JSONObject;
 @Path("/file/combination")
 @Workspace(workspaceTitle="Text Metrics", collectionTitle="Text topics")
 public class FileCombinationRecommendations {
+  
+  private final FileMetadataLookup metadataLookup;
+  private final FileStyleRecommendations styleRecommendations;
+  private final FileTopicRecommendations topicRecommendations;
+  
+  public FileCombinationRecommendations(
+      FileMetadataLookup metadataLookup,
+      FileStyleRecommendations styleRecommendations,
+      FileTopicRecommendations topicRecommendations
+      ) {
+    this.metadataLookup = metadataLookup;
+    this.styleRecommendations = styleRecommendations;
+    this.topicRecommendations = topicRecommendations;
+  }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -41,7 +54,7 @@ public class FileCombinationRecommendations {
       for (DistanceResult distance : allRows.subList(start, start + limit)) {
         final JSONObject row = new JSONObject().put("dist", distance.distance);
         rows.add(row);
-        final JSONObject metadata = AshurbanipalWeb.METADATA_LOOKUP.getByEtextNo(distance.etext_no);
+        final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
           row.put(key, metadata.get(key));
         }
@@ -56,10 +69,10 @@ public class FileCombinationRecommendations {
 
   public List<DistanceResult> combinedDistances(int etext_no) {
     final DistanceResult.ByEtext byEtextComparator = new DistanceResult.ByEtext();
-    final List<DistanceResult> styleDistances = AshurbanipalWeb.STYLE_RECOMMENDATIONS.euclidianDistances(etext_no);
+    final List<DistanceResult> styleDistances = styleRecommendations.euclidianDistances(etext_no);
     Collections.sort(styleDistances, byEtextComparator);
     int s = 0;
-    final List<DistanceResult> topicDistances = AshurbanipalWeb.TOPIC_RECOMMENDATIONS.topicDistances(etext_no);
+    final List<DistanceResult> topicDistances = topicRecommendations.topicDistances(etext_no);
     Collections.sort(topicDistances, byEtextComparator);
     int t = 0;
     final List<DistanceResult> results = new ArrayList<>();

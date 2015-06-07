@@ -39,7 +39,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import net.crsr.ashurbanipal.web.AshurbanipalWeb;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
@@ -57,8 +56,9 @@ public class FileStyleRecommendations {
   final private Map<Integer,Integer> etextToRow = new HashMap<>();
   final private Map<Integer,Integer> rowToEtext = new HashMap<>();
   final private double[][] posMatrix;
+  final private FileMetadataLookup metadataLookup;
 
-  public FileStyleRecommendations() {
+  public FileStyleRecommendations(FileMetadataLookup metadata) {
     BufferedReader br = null;
     try {
 
@@ -89,6 +89,8 @@ public class FileStyleRecommendations {
         }
       }
       
+      this.metadataLookup = metadata;
+      
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
@@ -115,7 +117,7 @@ public class FileStyleRecommendations {
       for (DistanceResult distance : allRows.subList(start, start + limit)) {
         final JSONObject row = new JSONObject().put("dist", distance.distance);
         rows.add(row);
-        final JSONObject metadata = AshurbanipalWeb.METADATA_LOOKUP.getByEtextNo(distance.etext_no);
+        final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
           row.put(key, metadata.get(key));
         }

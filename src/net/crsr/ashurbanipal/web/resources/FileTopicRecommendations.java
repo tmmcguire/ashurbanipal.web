@@ -38,7 +38,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import net.crsr.ashurbanipal.web.AshurbanipalWeb;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
@@ -54,8 +53,9 @@ public class FileTopicRecommendations {
   private static final String TOPIC_DATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.nouns";
 
   final private Map<Integer,BigInteger> topicSets = new HashMap<>();
+  final private FileMetadataLookup metadataLookup;
   
-  public FileTopicRecommendations() {
+  public FileTopicRecommendations(FileMetadataLookup metadataLookup) {
     BufferedReader br = null;
     try {
 
@@ -75,6 +75,8 @@ public class FileTopicRecommendations {
         }
         line = br.readLine();
       }
+      
+      this.metadataLookup = metadataLookup;
       
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -103,7 +105,7 @@ public class FileTopicRecommendations {
       for (DistanceResult distance : allRows.subList(start, end)) {
         final JSONObject row = new JSONObject().put("dist", distance.distance);
         rows.add(row);
-        final JSONObject metadata = AshurbanipalWeb.METADATA_LOOKUP.getByEtextNo(distance.etext_no);
+        final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
           row.put(key, metadata.get(key));
         }
