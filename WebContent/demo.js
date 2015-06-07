@@ -207,7 +207,7 @@
 
         // Recommendation request handlers
         success: function(response, options) { displayResults(PG.topic, response); },
-        failure: function(response, options) { displayError(PG.style, response); },
+        failure: function(response, options) { displayError(PG.topic, response); },
 
         // Left/right arrow handlers
         left: function(event, target) { rotateLeft(PG.topic); },
@@ -234,7 +234,7 @@
 
         // Recommendation request handlers
         success: function(response, options) { displayResults(PG.combination, response); },
-        failure: function(response, options) { displayError(PG.style, response); },
+        failure: function(response, options) { displayError(PG.combination, response); },
 
         // Left/right arrow handlers
         left: function(event, target) { rotateLeft(PG.combination); },
