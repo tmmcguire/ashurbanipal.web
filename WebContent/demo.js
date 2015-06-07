@@ -216,7 +216,7 @@
     };
 
     PG.combination = {
-        url: 'data/combination',
+        url: 'data/file/combination',
         eltBase: 'combined',
         metric: 'ell bole',
         transactionId: undefined,
