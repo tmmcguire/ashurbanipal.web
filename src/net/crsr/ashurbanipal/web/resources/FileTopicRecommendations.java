@@ -41,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 import net.crsr.ashurbanipal.web.AshurbanipalWeb;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
+import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -98,7 +99,8 @@ public class FileTopicRecommendations {
       Collections.sort(allRows);
       
       final List<JSONObject> rows = new ArrayList<>(limit);
-      for (DistanceResult distance : allRows.subList(start, start + limit)) {
+      final int end = Integer.min(start + limit, allRows.size());
+      for (DistanceResult distance : allRows.subList(start, end)) {
         final JSONObject row = new JSONObject().put("dist", distance.distance);
         rows.add(row);
         final JSONObject metadata = AshurbanipalWeb.METADATA_LOOKUP.getByEtextNo(distance.etext_no);
@@ -115,12 +117,18 @@ public class FileTopicRecommendations {
   
   // Uses the Jaccard distance between the two topic sets.
   public List<DistanceResult> topicDistances(int etext_no) {
-    final BigInteger thisBitSet = topicSets.get(etext_no);
     final List<DistanceResult> results = new ArrayList<>(topicSets.size());
+    final BigInteger thisBitSet = topicSets.get(etext_no);
+    if (thisBitSet == null) {
+      throw new ResultNotFound("No topic data found for Etext #" + etext_no);
+    }
     for (Map.Entry<Integer,BigInteger> entry : topicSets.entrySet()) {
-      final double intersect = thisBitSet.and(entry.getValue()).bitCount();
-      final double union = thisBitSet.or(entry.getValue()).bitCount();
-      results.add(new DistanceResult(entry.getKey(), (union - intersect) / union));
+      final BigInteger otherBitSet = entry.getValue();
+      if (otherBitSet != null) {
+        final double intersect = thisBitSet.and(otherBitSet).bitCount();
+        final double union = thisBitSet.or(otherBitSet).bitCount();
+        results.add(new DistanceResult(entry.getKey(), (union - intersect) / union));
+      }
     }
     return results;
   }
