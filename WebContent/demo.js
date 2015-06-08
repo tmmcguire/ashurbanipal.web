@@ -244,7 +244,7 @@
 
     var textStore = new Ext.data.Store({
         proxy: new Ext.data.HttpProxy({
-            url: 'data/lookup',
+            url: 'data/file/lookup',
             method: 'GET',
         }),
         reader: new Ext.data.JsonReader({
@@ -275,6 +275,7 @@
         applyTo: 'search',
         itemSelector: 'div.search-item',
         valueField: 'etext_no',
+        forceSelection: true,
         listeners: {
             'select': function(combo, record, index) {
                 if (record && record.data) {

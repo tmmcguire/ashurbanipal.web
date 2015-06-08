@@ -5,8 +5,13 @@ import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -18,7 +23,9 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
+import net.crsr.ashurbanipal.web.indexing.MetadataIndex;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -35,7 +42,8 @@ public class FileMetadataLookup {
   private static final Logger log = LoggerFactory.getLogger(FileMetadataLookup.class);
   
   final Map<Integer,JSONObject> metadata = new HashMap<>();
-  
+  final MetadataIndex index;
+
   public FileMetadataLookup() {
     BufferedReader br = null;
     try {
@@ -58,6 +66,8 @@ public class FileMetadataLookup {
         }
         line = br.readLine();
       }
+      
+      index = new MetadataIndex(metadata.entrySet());
     } catch (IOException e) {
       throw new RuntimeException(e);
     } catch (JSONException e) {
@@ -73,16 +83,34 @@ public class FileMetadataLookup {
       @QueryParam("query") String searchTerm,
       @QueryParam("start") @DefaultValue("0") Integer start,
       @QueryParam("limit") @DefaultValue("20") Integer limit) {
-    if (searchTerm == null) {
-      final String message = "bad request: parameter query=\"search-term\" required";
-      log.info(message);
-      throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
+    try {
+      if (searchTerm == null) {
+        final String message = "bad request: parameter query=\"search-term\" required";
+        log.info(message);
+        throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
+      }
+
+      final List<DistanceResult> allRows = index.getEntries(searchTerm);
+      Collections.sort(allRows, new DistanceResult.Inverse());
+      
+      final List<JSONObject> rows = new ArrayList<>(limit);
+      final int end = Integer.min(start + limit, allRows.size());
+      for (DistanceResult distance : allRows.subList(start, end)) {
+        final JSONObject row = new JSONObject().put("dist", distance.distance);
+        rows.add(row);
+        final JSONObject metadata = getByEtextNo(distance.etext_no);
+        for (String key : JSONObject.getNames(metadata)) {
+          row.put(key, metadata.get(key));
+        }
+      }
+
+      final JSONObject results = new JSONObject();
+      results.put("count", allRows.size());
+      results.put("rows", rows);
+      return results;
+    } catch (JSONException e) {
+      throw new InternalServerException(e);
     }
-    final String upperSearchTerm = searchTerm.toUpperCase();
-    
-    // TODO: indexing!
-    
-    return null;
   }
   
   @Path("/{etext_no}")
@@ -100,5 +128,9 @@ public class FileMetadataLookup {
     } else {
       throw new ResultNotFound("Unrecognized etext_no: " + etext_no);
     }
+  }
+  
+  public Set<Entry<Integer,JSONObject>> entrySet() {
+    return metadata.entrySet();
   }
 }
