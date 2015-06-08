@@ -137,10 +137,21 @@
         }
     }
 
+    // Clicking on the title of a text displays the recommendation page for the text.
+    function selectBookPage(event,target) {
+        target = event.getTarget('.book-title', 5, true);
+        if (target && target.hasClass('book-title')) {
+            var etext_no = target.getAttribute('data-etext-no');
+            if (etext_no) {
+                Ext.History.add(etext_no);
+            }
+        }
+    }
+
     // Template for displaying a book's metadata.
     PG.bookTpl = new Ext.XTemplate(
         '<div class="book-details">',
-        '<p><b><i>{title},</i></b></p>',
+        '<p class="book-title" data-etext-no="{etext_no}"><b><i>{title},</i></b></p>',
         '<p><b>{author}</b></p>',
         '<p>{subject}</p>',
         '<tpl if="release_date"><p>Released {release_date}</p></tpl>',
@@ -308,6 +319,7 @@
         Ext.get('topic-right').on('click', PG.topic.right);
         Ext.get('combined-left').on('click', PG.combination.left);
         Ext.get('combined-right').on('click', PG.combination.right);
+        Ext.get('app').on('click', selectBookPage);
 
         var token = Ext.util.JSON.decode( Ext.History.getToken() );
         if (token) {
