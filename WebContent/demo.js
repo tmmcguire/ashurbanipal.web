@@ -45,7 +45,9 @@
     }
 
     // Make a request for recommendations, based on the query object
-    function startRequest(query, start = 0, limit = 20) {
+    function startRequest(query, start, limit) {
+        start = typeof start !== 'undefined' ? start : 0;
+        limit = typeof limit !== 'undefined' ? limit : 20;
         query.loadMask.show();
         query.transactionId = Ext.Ajax.request({
             url: query.url,
@@ -72,7 +74,8 @@
 
     // Given an updated query object, update the UI state to show the
     // recommendations.
-    function showResults(query, message='No results available') {
+    function showResults(query, message) {
+        message = typeof message !== 'undefined' ? message : 'No results available';
         if (query.rows && query.rows.length) {
             // Whoohoo! Valid data!
             if (query.current === 0) {
