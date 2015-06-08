@@ -14,7 +14,8 @@ public class DistanceResult implements Comparable<DistanceResult> {
   // Default sort: by distance
   @Override
   public int compareTo(DistanceResult other) {
-    return Double.compare(this.distance, other.distance);
+    final int compare = Double.compare(this.distance, other.distance);
+    return compare != 0 ? compare : Integer.compare(this.etext_no, other.etext_no);
   }
   
   // Optional sort: by etext_no
@@ -22,6 +23,13 @@ public class DistanceResult implements Comparable<DistanceResult> {
     @Override
     public int compare(DistanceResult left, DistanceResult right) {
       return Integer.compare(left.etext_no, right.etext_no);
+    }
+  }
+  public static class Inverse implements Comparator<DistanceResult> {
+    @Override
+    public int compare(DistanceResult left, DistanceResult right) {
+      final int compare = Double.compare(right.distance, left.distance);
+      return compare != 0 ? compare : Integer.compare(left.etext_no, right.etext_no);
     }
   }
   
