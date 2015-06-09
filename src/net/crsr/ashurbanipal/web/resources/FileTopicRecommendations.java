@@ -26,37 +26,28 @@ import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
 
-import net.crsr.ashurbanipal.web.exceptions.BadRequest;
-import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
+import net.crsr.ashurbanipal.web.resources.utilities.AbstractFileRecommendations;
 import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 @Path("/file/topic")
 @Workspace(workspaceTitle="Text Metrics", collectionTitle="Text topics")
-public class FileTopicRecommendations {
+public class FileTopicRecommendations extends AbstractFileRecommendations {
 
   private static final String TOPIC_DATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.nouns";
 
   final private Map<Integer,BigInteger> topicSets = new HashMap<>();
-  final private FileMetadataLookup metadataLookup;
   
   public FileTopicRecommendations(FileMetadataLookup metadataLookup) {
+    super(metadataLookup);
     BufferedReader br = null;
     try {
 
@@ -77,49 +68,15 @@ public class FileTopicRecommendations {
         line = br.readLine();
       }
       
-      this.metadataLookup = metadataLookup;
-      
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
       if (br != null) { try { br.close(); } catch (IOException e) { /* ignore */ } }
     }
   }
-
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  public JSONObject getRecommendations(
-      @QueryParam("etext_no") Integer etext_no,
-      @QueryParam("start") @DefaultValue("0") Integer start,
-      @QueryParam("limit") @DefaultValue("20") Integer limit
-      ) {
-    if (etext_no == null) {
-      throw new BadRequest("bad request: parameter etext_no required");
-    }
-    
-    try {
-      final List<ScoredResult> allRows = topicDistances(etext_no);
-      Collections.sort(allRows);
-      
-      final List<JSONObject> rows = new ArrayList<>(limit);
-      final int end = Integer.min(start + limit, allRows.size());
-      for (ScoredResult distance : allRows.subList(start, end)) {
-        final JSONObject row = new JSONObject().put("score", distance.score);
-        rows.add(row);
-        final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
-        for (String key : JSONObject.getNames(metadata)) {
-          row.put(key, metadata.get(key));
-        }
-      }
-
-      return new JSONObject().put("rows", rows);
-    } catch (JSONException e) {
-      throw new InternalServerException(e);
-    }
-  }
   
   // Uses the Jaccard distance between the two topic sets.
-  public List<ScoredResult> topicDistances(int etext_no) {
+  public List<ScoredResult> scoredResults(int etext_no) {
     final List<ScoredResult> results = new ArrayList<>(topicSets.size());
     final BigInteger thisBitSet = topicSets.get(etext_no);
     if (thisBitSet == null) {

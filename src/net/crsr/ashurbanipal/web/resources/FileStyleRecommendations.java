@@ -25,46 +25,39 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
 
-import net.crsr.ashurbanipal.web.exceptions.BadRequest;
-import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
+import net.crsr.ashurbanipal.web.resources.utilities.AbstractFileRecommendations;
 import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 @Path("/file/style")
 @Workspace(workspaceTitle="Text Metrics", collectionTitle="Text style")
-public class FileStyleRecommendations {
+public class FileStyleRecommendations extends AbstractFileRecommendations {
   
   private static final String POS_DATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.pos";
 
   final private Map<Integer,Integer> etextToRow = new HashMap<>();
   final private Map<Integer,Integer> rowToEtext = new HashMap<>();
+  // Use unboxed data structures for speed.
   final private double[][] posMatrix;
-  final private FileMetadataLookup metadataLookup;
 
   public FileStyleRecommendations(FileMetadataLookup metadata) {
+    super(metadata);
     BufferedReader br = null;
     try {
 
       br = new BufferedReader(new InputStreamReader(FileStyleRecommendations.class.getClassLoader().getResourceAsStream(POS_DATA)));
 
+      // Read part of speech data into a temporary structure.
       final List<List<String>> temporary = new ArrayList<>();
       final Set<Integer> seenEtext = new HashSet<>();
       String line = br.readLine();
@@ -78,7 +71,8 @@ public class FileStyleRecommendations {
         }
         line = br.readLine();
       }
-      
+     
+      // Create the permanent part of speech data structures.
       posMatrix = new double[temporary.size()][temporary.get(0).size() - 1];
       for (int i = 0; i < temporary.size(); ++i) {
         final int etext_no = Integer.parseUnsignedInt(temporary.get(i).get(0));
@@ -90,47 +84,15 @@ public class FileStyleRecommendations {
         }
       }
       
-      this.metadataLookup = metadata;
-      
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
       if (br != null) { try { br.close(); } catch (IOException e) { /* ignore */ } }
     }
   }
-
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  public JSONObject getRecommendations(
-      @QueryParam("etext_no") Integer etext_no,
-      @QueryParam("start") @DefaultValue("0") Integer start,
-      @QueryParam("limit") @DefaultValue("20")Integer limit
-      ) {
-    if (etext_no == null) {
-      throw new BadRequest("Bad request: parameter etext_no required");
-    }
-
-    try {
-      final List<ScoredResult> allRows = euclidianDistances(etext_no);
-      Collections.sort(allRows);
-      
-      final List<JSONObject> rows = new ArrayList<>(limit);
-      for (ScoredResult distance : allRows.subList(start, start + limit)) {
-        final JSONObject row = new JSONObject().put("score", distance.score);
-        rows.add(row);
-        final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
-        for (String key : JSONObject.getNames(metadata)) {
-          row.put(key, metadata.get(key));
-        }
-      }
-
-      return new JSONObject().put("rows", rows);
-    } catch (JSONException e) {
-      throw new InternalServerException(e);
-    }
-  }
   
-  public List<ScoredResult> euclidianDistances(int etext_no) {
+  // Compute the Euclidian distance between the selected text row and the data for each text.
+  public List<ScoredResult> scoredResults(int etext_no) {
     final Integer row = etextToRow.get(etext_no);
     if (row == null) {
       throw new ResultNotFound("No style data found for Etext #" + etext_no);
@@ -144,7 +106,7 @@ public class FileStyleRecommendations {
         final double x = posMatrix[row][j] - posMatrix[i][j];
         distances[i] += x * x;
       }
-      distances[i] = Math.sqrt(distances[i]);
+      distances[i] = Math.sqrt(distances[i]); // Necessary? No.
     }
     
     final List<ScoredResult> results = new ArrayList<>(distances.length);
