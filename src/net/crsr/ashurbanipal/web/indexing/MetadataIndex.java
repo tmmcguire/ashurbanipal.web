@@ -43,13 +43,9 @@ public class MetadataIndex {
       for (Entry<Integer,JSONObject> entry : metadataLookup) {
         final Integer etext_no = entry.getKey();
         final JSONObject metadata = entry.getValue();
-        final String title = metadata.getString("title");
-        final String author = metadata.getString("author");
-        final String subject = metadata.getString("subject");
-
-        addWords(etext_no, title, 3);
-        addWords(etext_no, author, 2);
-        addWords(etext_no, subject, 1);
+        addWords(etext_no, metadata.getString("title"), 3);
+        addWords(etext_no, metadata.getString("author"), 2);
+        addWords(etext_no, metadata.getString("subject"), 1);
       }
 
       final Comparator<ScoredResult> comparator = new ScoredResult.ByEtext();
@@ -85,20 +81,17 @@ public class MetadataIndex {
       results.addAll( index.getOrDefault(keywords.get(i++), Collections.<ScoredResult> emptyList()) );
     }
     for (String word : keywords.subList(i, keywords.size())) {
-      final List<ScoredResult> postings = index.getOrDefault(word, Collections.<ScoredResult> emptyList());
-      if (postings != null) {
-        results = mergePostings(results, postings);
-      }
+      results = mergePostings(results, index.getOrDefault(word, Collections.<ScoredResult> emptyList()));
     }
     return results;
   }
 
   private List<ScoredResult> mergePostings(List<ScoredResult> results, final List<ScoredResult> postings) {
     final int pSize = postings.size();
-    final int rSize = results.size();
-    final List<ScoredResult> newResults = new ArrayList<>(rSize + pSize);
-    int r = 0;
     int p = 0;
+    final int rSize = results.size();
+    int r = 0;
+    final List<ScoredResult> newResults = new ArrayList<>(Integer.max(rSize, pSize));
     while (r < rSize && p < pSize) {
       final ScoredResult rResult = results.get(r);
       final ScoredResult pResult = postings.get(p);
@@ -112,29 +105,27 @@ public class MetadataIndex {
         ++p;
       }
     }
-    results = newResults;
-    return results;
+    return newResults;
   }
   
   private void unique(List<ScoredResult> results) {
     int i = 0;
     while (i < results.size()) {
-      int j = i;
-      ScoredResult current = results.get(i);
+      final ScoredResult current = results.get(i);
+      int j = i+1;
       while (j < results.size() && results.get(j).etext_no == current.etext_no) {
         ++j;
       }
       if (j != i + 1) {
         final List<ScoredResult> sublist = results.subList(i, j);
-        final Integer etext_no = sublist.get(0).etext_no;
-        double distance = 0.0;
+        double score = 0.0;
         for (ScoredResult elt : sublist) {
-          distance += elt.score;
+          score += elt.score;
         }
         sublist.clear();
-        sublist.add(new ScoredResult(etext_no, distance));
+        sublist.add(new ScoredResult(current.etext_no, score));
       }
-      i = j;
+      ++i;
     }
   }
 

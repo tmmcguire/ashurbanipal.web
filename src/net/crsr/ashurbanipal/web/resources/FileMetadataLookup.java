@@ -20,18 +20,15 @@
 
 package net.crsr.ashurbanipal.web.resources;
 
-import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -39,10 +36,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
+import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
 import net.crsr.ashurbanipal.web.indexing.MetadataIndex;
@@ -51,8 +47,6 @@ import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Path("/file/lookup")
 @Workspace(workspaceTitle="Text Lookup", collectionTitle="Author, Title, Subject query")
@@ -60,8 +54,6 @@ public class FileMetadataLookup {
 
   private static final String METADATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.metadata";
 
-  private static final Logger log = LoggerFactory.getLogger(FileMetadataLookup.class);
-  
   final Map<Integer,JSONObject> metadata = new HashMap<>();
   final MetadataIndex index;
 
@@ -106,9 +98,7 @@ public class FileMetadataLookup {
       @QueryParam("limit") @DefaultValue("20") Integer limit) {
     try {
       if (searchTerm == null) {
-        final String message = "bad request: parameter query=\"search-term\" required";
-        log.info(message);
-        throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
+        throw new BadRequest("bad request: parameter query=\"search-term\" required");
       }
 
       final List<ScoredResult> allRows = index.getEntries(searchTerm);
@@ -120,28 +110,27 @@ public class FileMetadataLookup {
         final JSONObject row = new JSONObject().put("score", distance.score);
         rows.add(row);
         final JSONObject metadata = getByEtextNo(distance.etext_no);
-        for (String key : JSONObject.getNames(metadata)) {
+        
+        @SuppressWarnings("unchecked")
+        final Iterator<String> keys = metadata.keys();
+        while (keys.hasNext()) {
+          String key = keys.next();
           row.put(key, metadata.get(key));
         }
       }
 
-      final JSONObject results = new JSONObject();
-      results.put("count", allRows.size());
-      results.put("rows", rows);
-      return results;
+      return new JSONObject().put("count", allRows.size()).put("rows", rows);
     } catch (JSONException e) {
       throw new InternalServerException(e);
     }
   }
   
-  @Path("/{etext_no}")
   @GET
+  @Path("/{etext_no}")
   @Produces(MediaType.APPLICATION_JSON)
   public JSONObject getByEtextNo(@PathParam("etext_no") Integer etext_no) {
     if (etext_no == null) {
-      final String message = "bad request: etext_no required";
-      log.info(message);
-      throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
+      throw new BadRequest("bad request: etext_no required");
     }
     final JSONObject result = metadata.get(etext_no);
     if (result != null) {
@@ -149,9 +138,5 @@ public class FileMetadataLookup {
     } else {
       throw new ResultNotFound("Unrecognized etext_no: " + etext_no);
     }
-  }
-  
-  public Set<Entry<Integer,JSONObject>> entrySet() {
-    return metadata.entrySet();
   }
 }
