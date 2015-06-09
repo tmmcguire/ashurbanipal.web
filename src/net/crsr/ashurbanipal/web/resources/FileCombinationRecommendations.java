@@ -39,7 +39,7 @@ public class FileCombinationRecommendations {
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public JSONObject getTextList(
+  public JSONObject getRecommendations(
       @QueryParam("etext_no") Integer etext_no,
       @QueryParam("start") @DefaultValue("0") Integer start,
       @QueryParam("limit") @DefaultValue("20") Integer limit) {
