@@ -26,14 +26,10 @@ import java.util.Set;
 
 import javax.ws.rs.core.Application;
 
-import net.crsr.ashurbanipal.web.resources.CombinationList;
 import net.crsr.ashurbanipal.web.resources.FileCombinationRecommendations;
-import net.crsr.ashurbanipal.web.resources.FileStyleRecommendations;
 import net.crsr.ashurbanipal.web.resources.FileMetadataLookup;
+import net.crsr.ashurbanipal.web.resources.FileStyleRecommendations;
 import net.crsr.ashurbanipal.web.resources.FileTopicRecommendations;
-import net.crsr.ashurbanipal.web.resources.StyleList;
-import net.crsr.ashurbanipal.web.resources.TextLookup;
-import net.crsr.ashurbanipal.web.resources.TopicList;
 
 public class AshurbanipalWeb extends Application {
 
@@ -56,19 +52,6 @@ public class AshurbanipalWeb extends Application {
             TOPIC_RECOMMENDATIONS
             )
         );
-  }
-
-  @Override
-  public Set<Class<?>> getClasses() {
-    return new HashSet<>(
-        Arrays.asList(
-            CombinationList.class,
-            StyleList.class,
-            TextLookup.class,
-            TopicList.class
-            )
-        );
-    
   }
 
 }
