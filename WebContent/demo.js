@@ -87,7 +87,7 @@
             // Put a recommendation in an element.
             for (var i = 0; i < 3; ++i) {
                 var data = query.rows[query.current + i];
-                data.distance = data.dist.toFixed(3) + ' ' + query.metric;
+                data.distance = data.score.toFixed(3) + ' ' + query.metric;
                 var elt = Ext.get(query.eltBase + (i + 1));
                 PG.bookTpl.overwrite(elt, data);
                 elt.unmask();

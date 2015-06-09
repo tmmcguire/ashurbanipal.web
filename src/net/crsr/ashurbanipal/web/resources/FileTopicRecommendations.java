@@ -41,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
+import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -97,13 +98,13 @@ public class FileTopicRecommendations {
     }
     
     try {
-      final List<DistanceResult> allRows = topicDistances(etext_no);
+      final List<ScoredResult> allRows = topicDistances(etext_no);
       Collections.sort(allRows);
       
       final List<JSONObject> rows = new ArrayList<>(limit);
       final int end = Integer.min(start + limit, allRows.size());
-      for (DistanceResult distance : allRows.subList(start, end)) {
-        final JSONObject row = new JSONObject().put("dist", distance.distance);
+      for (ScoredResult distance : allRows.subList(start, end)) {
+        final JSONObject row = new JSONObject().put("score", distance.score);
         rows.add(row);
         final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
@@ -118,8 +119,8 @@ public class FileTopicRecommendations {
   }
   
   // Uses the Jaccard distance between the two topic sets.
-  public List<DistanceResult> topicDistances(int etext_no) {
-    final List<DistanceResult> results = new ArrayList<>(topicSets.size());
+  public List<ScoredResult> topicDistances(int etext_no) {
+    final List<ScoredResult> results = new ArrayList<>(topicSets.size());
     final BigInteger thisBitSet = topicSets.get(etext_no);
     if (thisBitSet == null) {
       throw new ResultNotFound("No topic data found for Etext #" + etext_no);
@@ -129,7 +130,7 @@ public class FileTopicRecommendations {
       if (otherBitSet != null) {
         final double intersect = thisBitSet.and(otherBitSet).bitCount();
         final double union = thisBitSet.or(otherBitSet).bitCount();
-        results.add(new DistanceResult(entry.getKey(), (union - intersect) / union));
+        results.add(new ScoredResult(entry.getKey(), (union - intersect) / union));
       }
     }
     return results;

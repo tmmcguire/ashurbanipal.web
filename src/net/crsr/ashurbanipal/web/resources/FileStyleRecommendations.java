@@ -42,6 +42,7 @@ import javax.ws.rs.core.MediaType;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
+import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -110,12 +111,12 @@ public class FileStyleRecommendations {
     }
 
     try {
-      final List<DistanceResult> allRows = euclidianDistances(etext_no);
+      final List<ScoredResult> allRows = euclidianDistances(etext_no);
       Collections.sort(allRows);
       
       final List<JSONObject> rows = new ArrayList<>(limit);
-      for (DistanceResult distance : allRows.subList(start, start + limit)) {
-        final JSONObject row = new JSONObject().put("dist", distance.distance);
+      for (ScoredResult distance : allRows.subList(start, start + limit)) {
+        final JSONObject row = new JSONObject().put("score", distance.score);
         rows.add(row);
         final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
@@ -129,7 +130,7 @@ public class FileStyleRecommendations {
     }
   }
   
-  public List<DistanceResult> euclidianDistances(int etext_no) {
+  public List<ScoredResult> euclidianDistances(int etext_no) {
     final Integer row = etextToRow.get(etext_no);
     if (row == null) {
       throw new ResultNotFound("No style data found for Etext #" + etext_no);
@@ -146,9 +147,9 @@ public class FileStyleRecommendations {
       distances[i] = Math.sqrt(distances[i]);
     }
     
-    final List<DistanceResult> results = new ArrayList<>(distances.length);
+    final List<ScoredResult> results = new ArrayList<>(distances.length);
     for (int i = 0; i < distances.length; ++i) {
-      results.add(new DistanceResult(rowToEtext.get(i), distances[i]));
+      results.add(new ScoredResult(rowToEtext.get(i), distances[i]));
     }
     return results;
   }

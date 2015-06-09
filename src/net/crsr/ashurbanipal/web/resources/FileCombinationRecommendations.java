@@ -13,6 +13,7 @@ import javax.ws.rs.core.MediaType;
 
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
+import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -47,12 +48,12 @@ public class FileCombinationRecommendations {
     }
     
     try {
-      final List<DistanceResult> allRows = combinedDistances(etext_no);
+      final List<ScoredResult> allRows = combinedDistances(etext_no);
       Collections.sort(allRows);
       
       final List<JSONObject> rows = new ArrayList<>(limit);
-      for (DistanceResult distance : allRows.subList(start, start + limit)) {
-        final JSONObject row = new JSONObject().put("dist", distance.distance);
+      for (ScoredResult distance : allRows.subList(start, start + limit)) {
+        final JSONObject row = new JSONObject().put("score", distance.score);
         rows.add(row);
         final JSONObject metadata = metadataLookup.getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {
@@ -67,24 +68,24 @@ public class FileCombinationRecommendations {
     
   }
 
-  public List<DistanceResult> combinedDistances(int etext_no) {
-    final DistanceResult.ByEtext byEtextComparator = new DistanceResult.ByEtext();
-    final List<DistanceResult> styleDistances = styleRecommendations.euclidianDistances(etext_no);
+  public List<ScoredResult> combinedDistances(int etext_no) {
+    final ScoredResult.ByEtext byEtextComparator = new ScoredResult.ByEtext();
+    final List<ScoredResult> styleDistances = styleRecommendations.euclidianDistances(etext_no);
     Collections.sort(styleDistances, byEtextComparator);
     int s = 0;
-    final List<DistanceResult> topicDistances = topicRecommendations.topicDistances(etext_no);
+    final List<ScoredResult> topicDistances = topicRecommendations.topicDistances(etext_no);
     Collections.sort(topicDistances, byEtextComparator);
     int t = 0;
-    final List<DistanceResult> results = new ArrayList<>();
+    final List<ScoredResult> results = new ArrayList<>();
     while (s < styleDistances.size() && t < topicDistances.size()) {
-      final DistanceResult styleDistance = styleDistances.get(s);
-      final DistanceResult topicDistance = topicDistances.get(t);
+      final ScoredResult styleDistance = styleDistances.get(s);
+      final ScoredResult topicDistance = topicDistances.get(t);
       if (styleDistance.etext_no < topicDistance.etext_no) {
         ++s;
       } else if (topicDistance.etext_no < styleDistance.etext_no) {
         ++t;
       } else {
-        results.add( new DistanceResult(styleDistance.etext_no, styleDistance.distance * topicDistance.distance) );
+        results.add( new ScoredResult(styleDistance.etext_no, styleDistance.score * topicDistance.score) );
         ++s;
         ++t;
       }

@@ -18,37 +18,37 @@
  * 02110-1301 USA.
  */
 
-package net.crsr.ashurbanipal.web.resources;
+package net.crsr.ashurbanipal.web.resources.utilities;
 
 import java.util.Comparator;
 
-public class DistanceResult implements Comparable<DistanceResult> {
+public class ScoredResult implements Comparable<ScoredResult> {
   public final int etext_no;
-  public final double distance;
+  public final double score;
   
-  public DistanceResult(int etext_no, double distance) {
+  public ScoredResult(int etext_no, double score) {
     this.etext_no = etext_no;
-    this.distance = distance;
+    this.score = score;
   }
 
   // Default sort: by distance
   @Override
-  public int compareTo(DistanceResult other) {
-    final int compare = Double.compare(this.distance, other.distance);
+  public int compareTo(ScoredResult other) {
+    final int compare = Double.compare(this.score, other.score);
     return compare != 0 ? compare : Integer.compare(this.etext_no, other.etext_no);
   }
   
   // Optional sort: by etext_no
-  public static class ByEtext implements Comparator<DistanceResult> {
+  public static class ByEtext implements Comparator<ScoredResult> {
     @Override
-    public int compare(DistanceResult left, DistanceResult right) {
+    public int compare(ScoredResult left, ScoredResult right) {
       return Integer.compare(left.etext_no, right.etext_no);
     }
   }
-  public static class Inverse implements Comparator<DistanceResult> {
+  public static class Inverse implements Comparator<ScoredResult> {
     @Override
-    public int compare(DistanceResult left, DistanceResult right) {
-      final int compare = Double.compare(right.distance, left.distance);
+    public int compare(ScoredResult left, ScoredResult right) {
+      final int compare = Double.compare(right.score, left.score);
       return compare != 0 ? compare : Integer.compare(left.etext_no, right.etext_no);
     }
   }

@@ -46,6 +46,7 @@ import javax.ws.rs.core.Response;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
 import net.crsr.ashurbanipal.web.indexing.MetadataIndex;
+import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
 import org.json.JSONException;
@@ -110,13 +111,13 @@ public class FileMetadataLookup {
         throw new WebApplicationException(Response.status(BAD_REQUEST).entity(message).build());
       }
 
-      final List<DistanceResult> allRows = index.getEntries(searchTerm);
-      Collections.sort(allRows, new DistanceResult.Inverse());
+      final List<ScoredResult> allRows = index.getEntries(searchTerm);
+      Collections.sort(allRows, new ScoredResult.Inverse());
       
       final List<JSONObject> rows = new ArrayList<>(limit);
       final int end = Integer.min(start + limit, allRows.size());
-      for (DistanceResult distance : allRows.subList(start, end)) {
-        final JSONObject row = new JSONObject().put("dist", distance.distance);
+      for (ScoredResult distance : allRows.subList(start, end)) {
+        final JSONObject row = new JSONObject().put("score", distance.score);
         rows.add(row);
         final JSONObject metadata = getByEtextNo(distance.etext_no);
         for (String key : JSONObject.getNames(metadata)) {

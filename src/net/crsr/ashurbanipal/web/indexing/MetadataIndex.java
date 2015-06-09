@@ -29,14 +29,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import net.crsr.ashurbanipal.web.resources.DistanceResult;
+import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class MetadataIndex {
 
-  private static final Map<String,List<DistanceResult>> index = new HashMap<>();
+  private static final Map<String,List<ScoredResult>> index = new HashMap<>();
   
   public MetadataIndex(Set<Entry<Integer,JSONObject>> metadataLookup) {
     try {
@@ -52,8 +52,8 @@ public class MetadataIndex {
         addWords(etext_no, subject, 1);
       }
 
-      final Comparator<DistanceResult> comparator = new DistanceResult.ByEtext();
-      for (List<DistanceResult> postings : index.values()) {
+      final Comparator<ScoredResult> comparator = new ScoredResult.ByEtext();
+      for (List<ScoredResult> postings : index.values()) {
         postings.sort(comparator);
         unique(postings);
       }
@@ -77,15 +77,15 @@ public class MetadataIndex {
     return words;
   }
   
-  public List<DistanceResult> getEntries(String keys) {
+  public List<ScoredResult> getEntries(String keys) {
     final List<String> keywords = stringToWords(keys);
-    List<DistanceResult> results = new ArrayList<>();
+    List<ScoredResult> results = new ArrayList<>();
     int i = 0;
     while (i < keywords.size() && results.isEmpty()) {
-      results.addAll( index.getOrDefault(keywords.get(i++), Collections.<DistanceResult> emptyList()) );
+      results.addAll( index.getOrDefault(keywords.get(i++), Collections.<ScoredResult> emptyList()) );
     }
     for (String word : keywords.subList(i, keywords.size())) {
-      final List<DistanceResult> postings = index.getOrDefault(word, Collections.<DistanceResult> emptyList());
+      final List<ScoredResult> postings = index.getOrDefault(word, Collections.<ScoredResult> emptyList());
       if (postings != null) {
         results = mergePostings(results, postings);
       }
@@ -93,21 +93,21 @@ public class MetadataIndex {
     return results;
   }
 
-  private List<DistanceResult> mergePostings(List<DistanceResult> results, final List<DistanceResult> postings) {
+  private List<ScoredResult> mergePostings(List<ScoredResult> results, final List<ScoredResult> postings) {
     final int pSize = postings.size();
     final int rSize = results.size();
-    final List<DistanceResult> newResults = new ArrayList<>(rSize + pSize);
+    final List<ScoredResult> newResults = new ArrayList<>(rSize + pSize);
     int r = 0;
     int p = 0;
     while (r < rSize && p < pSize) {
-      final DistanceResult rResult = results.get(r);
-      final DistanceResult pResult = postings.get(p);
+      final ScoredResult rResult = results.get(r);
+      final ScoredResult pResult = postings.get(p);
       if (rResult.etext_no < pResult.etext_no) {
         ++r;
       } else if (pResult.etext_no < rResult.etext_no) {
         ++p;
       } else {
-        newResults.add( new DistanceResult(pResult.etext_no, pResult.distance + rResult.distance) );
+        newResults.add( new ScoredResult(pResult.etext_no, pResult.score + rResult.score) );
         ++r;
         ++p;
       }
@@ -116,23 +116,23 @@ public class MetadataIndex {
     return results;
   }
   
-  private void unique(List<DistanceResult> results) {
+  private void unique(List<ScoredResult> results) {
     int i = 0;
     while (i < results.size()) {
       int j = i;
-      DistanceResult current = results.get(i);
+      ScoredResult current = results.get(i);
       while (j < results.size() && results.get(j).etext_no == current.etext_no) {
         ++j;
       }
       if (j != i + 1) {
-        final List<DistanceResult> sublist = results.subList(i, j);
+        final List<ScoredResult> sublist = results.subList(i, j);
         final Integer etext_no = sublist.get(0).etext_no;
         double distance = 0.0;
-        for (DistanceResult elt : sublist) {
-          distance += elt.distance;
+        for (ScoredResult elt : sublist) {
+          distance += elt.score;
         }
         sublist.clear();
-        sublist.add(new DistanceResult(etext_no, distance));
+        sublist.add(new ScoredResult(etext_no, distance));
       }
       i = j;
     }
@@ -140,12 +140,12 @@ public class MetadataIndex {
 
   private void addWords(final Integer etext_no, final String string, int weight) {
     for (String word : stringToWords(string)) {
-      List<DistanceResult> postings = index.get(word);
+      List<ScoredResult> postings = index.get(word);
       if (postings == null) {
         postings = new ArrayList<>();
         index.put(word, postings);
       }
-      postings.add(new DistanceResult(etext_no, weight));
+      postings.add(new ScoredResult(etext_no, weight));
     }
   }
 
