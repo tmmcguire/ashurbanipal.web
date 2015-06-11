@@ -23,9 +23,8 @@ package net.crsr.ashurbanipal.web.resources;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class FileTopicRecommendations extends AbstractFileRecommendations {
 
   private static final String TOPIC_DATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.nouns";
 
-  final private Map<Integer,BigInteger> topicSets = new HashMap<>();
+  final private Map<Integer,BitSet> topicSets = new HashMap<>();
   
   public FileTopicRecommendations(FileMetadataLookup metadataLookup) {
     super(metadataLookup);
@@ -55,19 +54,18 @@ public class FileTopicRecommendations extends AbstractFileRecommendations {
 
       String line = br.readLine();
       while (line != null) {
-        final List<String> list = Arrays.asList(line.split("\t"));
-        final int etext_no = Integer.parseInt(list.get(0));
+        final String[] list = line.split("\t");
+        final int etext_no = Integer.parseInt(list[0]);
         if (!topicSets.containsKey(etext_no)) {
           // Only retain the first occurrence of an etext. This data needs cleaning.
-          BigInteger bitSet = BigInteger.valueOf(0);
-          for (String bit : list.subList(1, list.size())) {
-            bitSet = bitSet.setBit( Integer.valueOf(bit) );
+          final BitSet bitSet = new BitSet();
+          for (int i = 0; i < list.length; ++i) {
+            bitSet.set( Integer.valueOf(list[i]) );
           }
           topicSets.put(etext_no, bitSet);
         }
         line = br.readLine();
       }
-      
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
@@ -78,15 +76,23 @@ public class FileTopicRecommendations extends AbstractFileRecommendations {
   // Uses the Jaccard distance between the two topic sets.
   public List<ScoredResult> scoredResults(int etext_no) {
     final List<ScoredResult> results = new ArrayList<>(topicSets.size());
-    final BigInteger thisBitSet = topicSets.get(etext_no);
+    final BitSet thisBitSet = topicSets.get(etext_no);
     if (thisBitSet == null) {
       throw new ResultNotFound("No topic data found for Etext #" + etext_no);
     }
-    for (Map.Entry<Integer,BigInteger> entry : topicSets.entrySet()) {
-      final BigInteger otherBitSet = entry.getValue();
+    final BitSet intersectBitSet = new BitSet(thisBitSet.size());
+    final BitSet unionBitSet = new BitSet(thisBitSet.size());
+    for (Map.Entry<Integer,BitSet> entry : topicSets.entrySet()) {
+      final BitSet otherBitSet = entry.getValue();
       if (otherBitSet != null) {
-        final double intersect = thisBitSet.and(otherBitSet).bitCount();
-        final double union = thisBitSet.or(otherBitSet).bitCount();
+        intersectBitSet.clear();
+        intersectBitSet.or(thisBitSet);
+        intersectBitSet.and(otherBitSet);
+        final double intersect = intersectBitSet.cardinality();
+        unionBitSet.clear();
+        unionBitSet.or(thisBitSet);
+        unionBitSet.or(otherBitSet);
+        final double union = unionBitSet.cardinality();
         results.add(new ScoredResult(entry.getKey(), (union - intersect) / union));
       }
     }

@@ -53,7 +53,7 @@ import org.json.JSONObject;
 public class FileMetadataLookup {
 
   private static final String METADATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.metadata";
-
+  
   final Map<Integer,JSONObject> metadata = new HashMap<>();
   final MetadataIndex index;
 
@@ -64,6 +64,9 @@ public class FileMetadataLookup {
 
       String line = br.readLine();
       final String[] columns = line.split("\t");
+      // Columns with common values.
+      final int languageCol = getColumnId(columns, "language");
+      final int copyrightCol = getColumnId(columns, "copyright_status");
 
       line = br.readLine();
       while (line != null) {
@@ -74,7 +77,8 @@ public class FileMetadataLookup {
           final JSONObject record = new JSONObject().put("etext_no", etext_no);
           metadata.put(etext_no, record);
           for (int i = 1; i < values.length; ++i) {
-            record.put(columns[i], values[i]);
+            // Intern common values
+            record.put(columns[i].intern(), (i == languageCol || i == copyrightCol) ? values[i].intern() : values[i]);
           }
         }
         line = br.readLine();
@@ -114,7 +118,7 @@ public class FileMetadataLookup {
         @SuppressWarnings("unchecked")
         final Iterator<String> keys = metadata.keys();
         while (keys.hasNext()) {
-          String key = keys.next();
+          final String key = keys.next();
           row.put(key, metadata.get(key));
         }
       }
@@ -138,5 +142,14 @@ public class FileMetadataLookup {
     } else {
       throw new ResultNotFound("Unrecognized etext_no: " + etext_no);
     }
+  }
+  
+  private int getColumnId(String[] columns, String column) {
+    for (int i = 0; i < columns.length; ++i) {
+      if (column.equals( columns[i] )) {
+        return i;
+      }
+    }
+    return -1;
   }
 }
