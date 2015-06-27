@@ -53,4 +53,8 @@ public class ScoredResult implements Comparable<ScoredResult> {
     }
   }
   
+  @Override
+  public String toString() {
+    return String.format("<%s,%s>", etext_no, score);
+  }
 }

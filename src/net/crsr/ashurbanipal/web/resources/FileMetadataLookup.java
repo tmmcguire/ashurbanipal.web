@@ -41,7 +41,8 @@ import javax.ws.rs.core.MediaType;
 import net.crsr.ashurbanipal.web.exceptions.BadRequest;
 import net.crsr.ashurbanipal.web.exceptions.InternalServerException;
 import net.crsr.ashurbanipal.web.exceptions.ResultNotFound;
-import net.crsr.ashurbanipal.web.indexing.MetadataIndex;
+import net.crsr.ashurbanipal.web.indexing.AbstractIndex;
+import net.crsr.ashurbanipal.web.indexing.SoundexIndex;
 import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.apache.wink.common.annotations.Workspace;
@@ -55,8 +56,9 @@ public class FileMetadataLookup {
   private static final String METADATA = "net/crsr/ashurbanipal/web/resources/data/gutenberg.metadata";
   
   final Map<Integer,JSONObject> metadata = new HashMap<>();
-  final MetadataIndex index;
+  final AbstractIndex index;
 
+  // The indexing choice here uses a soundex algorithm chosen by SoundexIndex.
   public FileMetadataLookup() {
     BufferedReader br = null;
     try {
@@ -84,7 +86,7 @@ public class FileMetadataLookup {
         line = br.readLine();
       }
       
-      index = new MetadataIndex(metadata.entrySet());
+      index = new SoundexIndex(metadata);
     } catch (IOException e) {
       throw new RuntimeException(e);
     } catch (JSONException e) {

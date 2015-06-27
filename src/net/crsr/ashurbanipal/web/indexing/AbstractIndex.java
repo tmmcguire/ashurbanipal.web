@@ -17,7 +17,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301 USA.
  */
-
 package net.crsr.ashurbanipal.web.indexing;
 
 import java.util.ArrayList;
@@ -27,20 +26,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import net.crsr.ashurbanipal.web.resources.utilities.ScoredResult;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MetadataIndex {
+public abstract class AbstractIndex {
 
-  private static final Map<String,List<ScoredResult>> index = new HashMap<>();
+  protected static final Map<String,List<ScoredResult>> index = new HashMap<>();
+
+  protected abstract List<String> stringToWords(String s);
   
-  public MetadataIndex(Set<Entry<Integer,JSONObject>> metadataLookup) {
+  protected AbstractIndex(Map<Integer,JSONObject> metadataLookup) {
     try {
-      for (Entry<Integer,JSONObject> entry : metadataLookup) {
+      for (Entry<Integer,JSONObject> entry : metadataLookup.entrySet()) {
         final Integer etext_no = entry.getKey();
         final JSONObject metadata = entry.getValue();
         addWords(etext_no, metadata.getString("title"), 3);
@@ -57,40 +57,27 @@ public class MetadataIndex {
       throw new RuntimeException(e);
     }
   }
-  
-  public static List<String> stringToWords(String s) {
-    final StringBuilder sb = new StringBuilder(s);
-    int cur = sb.indexOf("'");
-    while (cur >= 0) {
-      int toRemove = Character.charCount(sb.codePointAt(cur));
-      sb.delete(cur, cur + toRemove);
-      cur = sb.indexOf("'", cur);
-    }
-    final List<String> words = new ArrayList<>();
-    for (String word : sb.toString().split("[^\\p{IsAlphabetic}\\d]+")) {
-      words.add( word.toLowerCase() );
-    }
-    return words;
-  }
-  
+
   public List<ScoredResult> getEntries(String keys) {
-    final List<String> keywords = stringToWords(keys);
     List<ScoredResult> results = new ArrayList<>();
+    final List<String> words = stringToWords(keys);
     int i = 0;
-    while (i < keywords.size() && results.isEmpty()) {
-      results.addAll( index.getOrDefault(keywords.get(i++), Collections.<ScoredResult> emptyList()) );
+    while (i < words.size() && results.isEmpty()) {
+      results.addAll( index.getOrDefault(words.get(i), Collections.<ScoredResult> emptyList()) );
+      ++i;
     }
-    for (String word : keywords.subList(i, keywords.size())) {
-      results = mergePostings(results, index.getOrDefault(word, Collections.<ScoredResult> emptyList()));
+    while (i < words.size()) {
+      results = mergePostings(results, index.getOrDefault(words.get(i), Collections.<ScoredResult> emptyList()));
+      ++i;
     }
     return results;
   }
 
   private List<ScoredResult> mergePostings(List<ScoredResult> results, final List<ScoredResult> postings) {
-    final int pSize = postings.size();
-    int p = 0;
     final int rSize = results.size();
     int r = 0;
+    final int pSize = postings.size();
+    int p = 0;
     final List<ScoredResult> newResults = new ArrayList<>(Integer.max(rSize, pSize));
     while (r < rSize && p < pSize) {
       final ScoredResult rResult = results.get(r);
@@ -107,7 +94,7 @@ public class MetadataIndex {
     }
     return newResults;
   }
-  
+
   private void unique(List<ScoredResult> results) {
     int i = 0;
     while (i < results.size()) {
@@ -128,7 +115,7 @@ public class MetadataIndex {
       ++i;
     }
   }
-
+  
   private void addWords(final Integer etext_no, final String string, int weight) {
     for (String word : stringToWords(string)) {
       List<ScoredResult> postings = index.get(word);

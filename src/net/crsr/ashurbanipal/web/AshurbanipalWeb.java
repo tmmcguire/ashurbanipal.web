@@ -33,6 +33,7 @@ import net.crsr.ashurbanipal.web.resources.FileTopicRecommendations;
 
 public class AshurbanipalWeb extends Application {
 
+  // See FileMetadataLookup for indexing choice.
   public static final FileMetadataLookup METADATA_LOOKUP = new FileMetadataLookup();
   public static final FileStyleRecommendations STYLE_RECOMMENDATIONS = new FileStyleRecommendations(METADATA_LOOKUP);
   public static final FileTopicRecommendations TOPIC_RECOMMENDATIONS = new FileTopicRecommendations(METADATA_LOOKUP);
