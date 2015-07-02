@@ -60,20 +60,25 @@ public abstract class AbstractIndex {
 
   public List<ScoredResult> getEntries(String keys) {
     List<ScoredResult> results = new ArrayList<>();
-    final List<String> words = stringToWords(keys);
-    int i = 0;
-    while (i < words.size() && results.isEmpty()) {
-      results.addAll( index.getOrDefault(words.get(i), Collections.<ScoredResult> emptyList()) );
-      ++i;
-    }
-    while (i < words.size()) {
-      results = mergePostings(results, index.getOrDefault(words.get(i), Collections.<ScoredResult> emptyList()));
-      ++i;
+    for (String word : stringToWords(keys)) {
+      results = acceptOrMergePostings(results, word);
     }
     return results;
   }
+  
+  protected List<ScoredResult> acceptOrMergePostings(List<ScoredResult> results, String word) {
+    final List<ScoredResult> postings = index.getOrDefault(word, Collections.<ScoredResult>emptyList());
+    if (results.isEmpty()) {
+      // Accept the results for the current word.
+      results.addAll(postings);
+      return results;
+    } else {
+      // Merge the existing and current word's results. 
+      return mergePostings(results, postings);
+    }
+  }
 
-  private List<ScoredResult> mergePostings(List<ScoredResult> results, final List<ScoredResult> postings) {
+  protected List<ScoredResult> mergePostings(List<ScoredResult> results, final List<ScoredResult> postings) {
     final int rSize = results.size();
     int r = 0;
     final int pSize = postings.size();
